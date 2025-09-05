@@ -1,0 +1,33 @@
+version: "3.8"
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.9.1
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+  flowise:
+    image: flowiseai/flowise:latest
+    container_name: flowise
+    depends_on:
+      - qdrant
+    environment:
+      - PORT=3000
+      - FLOWISE_USERNAME=admin
+      - FLOWISE_PASSWORD=admin
+      - DATABASE_PATH=/root/.flowise
+      - LOG_LEVEL=info
+      - DISABLE_FLOWISE_TELEMETRY=true
+    ports:
+      - "3000:3000"
+    volumes:
+      - flowise_data:/root/.flowise
+      - ./flows:/app/flows
+      - ./data/source:/app/data/source
+      - ./prompts:/app/flows_prompts
+
+volumes:
+  qdrant_storage:
+  flowise_data:
