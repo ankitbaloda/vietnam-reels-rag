@@ -1,0 +1,1 @@
+{"name":"01_Ideation_And_EDL","nodes":[{"id":"ingest-guard","type":"Prompt","data":{"mode":"system","prompt":"@/app/flows_prompts/00_ingest_guardrail.md"}},{"id":"csv-loader-travel","type":"Document Loader","data":{"loader":"CSV","path":"/app/data/source/Travel Files Directory.csv","csvDelimiter":","}}]}
