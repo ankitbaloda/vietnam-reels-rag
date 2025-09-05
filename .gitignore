@@ -1,0 +1,18 @@
+# env and local
+.env
+.env.local
+
+# macOS
+.DS_Store
+
+# Flowise local DB
+flowise_data/
+root/.flowise/
+
+# Node / logs (if any)
+node_modules/
+npm-debug.log*
+
+# Data you might not want to commit (optional)
+data/source/*
+!data/source/.gitkeep
