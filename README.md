@@ -37,6 +37,16 @@ GitHub Codespaces (alternative)
 
 --------------------------------------------------------------------------------
 
+Dev Container (VS Code / Codespaces)
+
+- Open this repo in GitHub Codespaces or locally with VS Code + Dev Containers extension.
+- The dev container includes Docker-in-Docker support. Inside the container, run:
+  - `docker compose up -d`
+- Access Flowise on the forwarded port 3000. Qdrant is on 6333.
+- The container also auto-copies `.env.example` to `.env` if `.env` is missing—fill in your keys before running.
+
+--------------------------------------------------------------------------------
+
 Flows in this repo
 
 - 00 Ingest Guardrail (prompt): Blocks output unless all required files are ingested.

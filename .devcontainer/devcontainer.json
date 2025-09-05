@@ -1,0 +1,33 @@
+{
+  "name": "Vietnam Reels RAG - Dev",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+  "ghcr.io/devcontainers/features/python:1": {},
+  "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "ms-python.python",
+        "GitHub.copilot",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "files.watcherExclude": {
+          "**/node_modules/**": true,
+          "**/.git/**": true
+        }
+      }
+    }
+  },
+  "forwardPorts": [3000, 6333],
+  "portsAttributes": {
+    "3000": { "label": "Flowise" },
+    "6333": { "label": "Qdrant" }
+  },
+  "remoteUser": "vscode",
+  "postCreateCommand": "bash -lc 'if [ ! -f .env ] && [ -f .env.example ]; then cp .env.example .env; fi; python3 -m pip install -U pip >/dev/null 2>&1 || true; if [ -f requirements.txt ]; then pip3 install -r requirements.txt || true; fi'",
+  "postStartCommand": "bash -lc 'echo Dev container ready. Use: docker compose up -d'"
+}
