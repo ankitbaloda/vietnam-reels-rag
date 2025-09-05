@@ -28,6 +28,21 @@ services:
       - ./data/source:/app/data/source
       - ./prompts:/app/flows_prompts
 
+  indexer:
+    image: python:3.12-slim
+    container_name: indexer
+    depends_on:
+      - qdrant
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - EMBEDDINGS_MODEL=${EMBEDDINGS_MODEL}
+    entrypoint: ["bash", "-lc", "pip install -r requirements.txt && python scripts/build_hierarchical_index.py --source-dir data/source --collection flowise_reels --embeddings-model ${EMBEDDINGS_MODEL:-text-embedding-3-large} --qdrant-url ${QDRANT_URL:-http://qdrant:6333} --max-tokens-per-chunk ${MAX_TOKENS_PER_CHUNK:-800} --overlap-tokens ${OVERLAP_TOKENS:-100}"]
+
 volumes:
   qdrant_storage:
   flowise_data:
