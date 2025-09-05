@@ -1,0 +1,68 @@
+name: Reindex Hierarchical Embeddings
+
+on:
+  workflow_dispatch:
+    inputs:
+      collection_name:
+        description: Qdrant collection name
+        default: flowise_reels
+        required: false
+      source_dir:
+        description: Source directory to index
+        default: data/source
+        required: false
+      embeddings_model:
+        description: OpenAI embeddings model
+        default: text-embedding-3-large
+        required: false
+      max_tokens_per_chunk:
+        description: Max tokens per chunk
+        default: '800'
+        required: false
+      overlap_tokens:
+        description: Overlap tokens between chunks
+        default: '100'
+        required: false
+  push:
+    paths:
+      - 'data/source/**'
+      - 'scripts/**'
+
+jobs:
+  reindex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.9.1
+        ports:
+          - 6333:6333
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deps
+        run: |
+          python -m pip install -U pip
+          pip install -r requirements.txt
+      - name: Wait for Qdrant
+        run: |
+          for i in {1..20}; do
+            curl -sS http://localhost:6333/collections && break || sleep 2;
+          done
+      - name: Run indexer
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          QDRANT_URL: http://localhost:6333
+          QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+        run: |
+          python scripts/build_hierarchical_index.py \
+            --source-dir "${{ github.event.inputs.source_dir || 'data/source' }}" \
+            --collection "${{ github.event.inputs.collection_name || 'flowise_reels' }}" \
+            --embeddings-model "${{ github.event.inputs.embeddings_model || 'text-embedding-3-large' }}" \
+            --qdrant-url "$QDRANT_URL" \
+            --max-tokens-per-chunk "${{ github.event.inputs.max_tokens_per_chunk || '800' }}" \
+            --overlap-tokens "${{ github.event.inputs.overlap_tokens || '100' }}"
