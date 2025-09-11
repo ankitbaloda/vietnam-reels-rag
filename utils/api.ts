@@ -21,6 +21,7 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
   while (attempt <= maxRetries) {
     try {
       const response = await fetch(`${apiBase}${endpoint}`, {
+        headers: {
           'Content-Type': 'application/json',
           ...options?.headers,
         },
@@ -71,6 +72,7 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
 export async function fetchModels(): Promise<{ models: string[]; items: ModelItem[] }> {
   try {
     const data = await apiCall<{ models: string[]; items: ModelItem[] }>('/models');
+    return data;
   } catch (error) {
     console.warn('Backend unavailable, using fallback models:', error);
     // Provide comprehensive fallback models
