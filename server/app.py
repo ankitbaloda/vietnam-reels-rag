@@ -117,8 +117,8 @@ def get_openai_client():
                 base_url=base_url,
                 api_key=or_key,
                 default_headers=headers or None,
-                timeout=60.0,
-                max_retries=3
+                timeout=120.0,
+                max_retries=5
             )
         except Exception as e:
             logger.error(f"OpenRouter client failed: {e}")
@@ -128,7 +128,7 @@ def get_openai_client():
     if openai_key:
         try:
             from openai import OpenAI
-            return OpenAI(api_key=openai_key, timeout=60.0, max_retries=3)
+            return OpenAI(api_key=openai_key, timeout=120.0, max_retries=5)
         except Exception as e:
             logger.error(f"OpenAI client failed: {e}")
     
@@ -152,7 +152,7 @@ async def fetch_openrouter_models():
             headers["X-Title"] = os.getenv("OPENROUTER_APP_NAME")
         
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"{base_url}/models", headers=headers, timeout=30.0)
+            response = await client.get(f"{base_url}/models", headers=headers, timeout=60.0)
             if response.status_code == 200:
                 data = response.json()
                 models = []
@@ -231,12 +231,16 @@ async def chat_completion(request: ChatRequest):
         messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
         
         # Make API call
-        response = client.chat.completions.create(
-            model=request.model,
-            messages=messages,
-            temperature=request.temperature,
-            max_tokens=4000
-        )
+        try:
+            response = client.chat.completions.create(
+                model=request.model,
+                messages=messages,
+                temperature=request.temperature,
+                max_tokens=4000
+            )
+        except Exception as api_error:
+            logger.error(f"API call failed: {api_error}")
+            raise HTTPException(status_code=503, detail=f"LLM API unavailable: {str(api_error)}")
         
         response_content = response.choices[0].message.content or ""
         usage = {
@@ -259,6 +263,7 @@ async def chat_completion(request: ChatRequest):
         }
     except Exception as e:
         logger.error(f"Chat completion error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.post("/rag/chat")
 async def rag_chat(request: RAGRequest):
@@ -270,15 +275,20 @@ async def rag_chat(request: RAGRequest):
         except ImportError:
             # Fallback if pipeline not available
             client = get_openai_client()
-            response = client.chat.completions.create(
-                model=request.model,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant for travel content creation."},
-                    {"role": "user", "content": request.query}
-                ],
-                temperature=request.temperature,
-                max_tokens=4000
-            )
+            try:
+                response = client.chat.completions.create(
+                    model=request.model,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant for travel content creation."},
+                        {"role": "user", "content": request.query}
+                    ],
+                    temperature=request.temperature,
+                    max_tokens=4000
+                )
+            except Exception as api_error:
+                logger.error(f"RAG API call failed: {api_error}")
+                raise HTTPException(status_code=503, detail=f"LLM API unavailable: {str(api_error)}")
+            
             response_content = response.choices[0].message.content or ""
             usage = {
                 "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
