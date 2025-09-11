@@ -37,6 +37,6 @@
     "PUPPETEER_EXECUTABLE_PATH": "/usr/bin/chromium-browser",
     "DISPLAY": ":0"
   },
-  "postCreateCommand": "bash -lc 'if [ ! -f .env ] && [ -f .env.example ]; then cp .env.example .env; fi; python3 -m ensurepip --upgrade; python3 -m pip install -U pip >/dev/null 2>&1 || true; if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt || true; fi; echo \"Installing browser dependencies...\"; apt update && apt install -y libglib2.0-0 libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libasound2 libgtk-3-0 libx11-xcb1 libxcb-dri3-0 libxcb-shm0 libxcb1 libpangocairo-1.0-0 libatk1.0-0 libcairo-gobject2 libgdk-pixbuf2.0-0 || echo \"Browser dependencies installation failed, but continuing...\"'",
+  "postCreateCommand": "bash -lc 'apt update && apt install -y build-essential zlib1g-dev libglib2.0-0 libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libasound2 libgtk-3-0 libx11-xcb1 libxcb-dri3-0 libxcb-shm0 libxcb1 libpangocairo-1.0-0 libatk1.0-0 libcairo-gobject2 libgdk-pixbuf2.0-0 || echo \"System dependencies installation failed, but continuing...\"; if [ ! -f .env ] && [ -f .env.example ]; then cp .env.example .env; fi; python3 -m ensurepip --upgrade; python3 -m pip install -U pip >/dev/null 2>&1 || true; if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt || true; fi'",
   "postStartCommand": "bash -lc 'echo Dev container ready. Use: docker compose up -d'"
 }
