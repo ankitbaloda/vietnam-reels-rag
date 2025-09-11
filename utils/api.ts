@@ -14,13 +14,10 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const baseDelay = 1000;
   let attempt = 0;
   
-  // Use correct API base URL - server runs on port 8000
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
-  
   
   while (attempt <= maxRetries) {
     try {
-      const response = await fetch(`${apiBase}${endpoint}`, {
+      const response = await fetch(`/api${endpoint}`, {
         headers: {
           'Content-Type': 'application/json',
           ...options?.headers,
