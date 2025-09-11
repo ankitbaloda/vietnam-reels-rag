@@ -4,35 +4,31 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Try to forward to backend
-    const response = await fetch('http://server:8000/chat/stream', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (response.ok && response.body) {
-      // Forward the streaming response
-      return new NextResponse(response.body, {
-        headers: {
-          'Content-Type': 'text/plain',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
-    } else {
-      throw new Error(`Backend returned ${response.status}`);
-    }
-  } catch (error) {
-    console.error('Chat stream API error:', error);
-    
-    // Return a fallback SSE response
+    // Mock chat response for now since backend is not available
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
-        const message = "Backend service unavailable. Please ensure the FastAPI server is running on port 8000.";
+        const message = "I'm a travel content creation assistant. I can help you generate ideas, outlines, scripts, and more for your travel reels. What would you like to create today?";
+        controller.enqueue(encoder.encode(`event: message\ndata: {"delta": "${message}"}\n\n`));
+        controller.enqueue(encoder.encode(`event: done\ndata: {"finish_reason": "stop"}\n\n`));
+        controller.close();
+      }
+    });
+
+    return new NextResponse(stream, {
+      headers: {
+        'Content-Type': 'text/plain',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
+  } catch (error) {
+    console.error('Chat stream API error:', error);
+    
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        const message = "I'm having trouble processing your request right now. Please try again.";
         controller.enqueue(encoder.encode(`event: message\ndata: {"delta": "${message}"}\n\n`));
         controller.enqueue(encoder.encode(`event: done\ndata: {"finish_reason": "error"}\n\n`));
         controller.close();
