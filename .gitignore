@@ -22,6 +22,11 @@ npm-debug.log*
 # Data you might not want to commit (optional)
 data/source/*
 !data/source/.gitkeep
+!data/source/Travel Files Directory.csv
+!data/source/Vietnam Daywise Narrations Transcripts.txt
+!data/source/Master_Viral_Travel_Reels_Playbook.txt
+!data/source/vietnam_trip_costs - Trip Cost (Audience).csv
+!data/source/VIPIN CHAHAL - COMPLETE STYLE DOCUMENTATION.txt
 
 # App runtime artifacts
 out/
