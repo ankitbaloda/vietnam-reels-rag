@@ -34,6 +34,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isPipelineRunning, setIsPipelineRunning] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
   // Initialize data on mount
   useEffect(() => {
@@ -288,31 +289,10 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-white dark:bg-gray-900 flex">
       {/* Header Controls */}
-      <HeaderControls
-        selectedModel={selectedModel}
-        onModelChange={setSelectedModel}
-        ragEnabled={ragEnabled}
-        onRAGToggle={setRagEnabled}
-        topK={topK}
-        onTopKChange={setTopK}
-        temperature={temperature}
-        onTemperatureChange={setTemperature}
-        sessionTitle={currentSession?.name}
-        onSessionTitleChange={(t) => {
-          if (!currentSession) return;
-          const updated = { ...currentSession, name: t };
-          setCurrentSession(updated);
-          const updatedSessions = sessions.map(s => s.id === updated.id ? updated : s);
-          setSessions(updatedSessions);
-          saveSessions(updatedSessions);
-        }}
-      />
-
-      {/* Main Layout */}
-      <div className="flex-1 flex">
-        {/* Sessions Sidebar */}
+      {/* Sessions Sidebar */}
+      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 overflow-hidden`}>
         <SessionSidebar
           sessions={sessions}
           currentSession={currentSession}
@@ -321,17 +301,76 @@ export default function Home() {
           onSessionRename={handleSessionRename}
           onSessionDelete={handleSessionDelete}
           onSessionDuplicate={handleSessionDuplicate}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
+      </div>
 
-        {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Step Tabs */}
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header with model controls */}
+        <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {sidebarCollapsed && (
+                <button
+                  onClick={() => setSidebarCollapsed(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              )}
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {currentSession?.name || 'New Chat'}
+              </h1>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              {/* Model Selector */}
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                {models.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.label}
+                  </option>
+                ))}
+              </select>
+              
+              {/* RAG Toggle */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 dark:text-gray-300">RAG</span>
+                <button
+                  onClick={() => setRagEnabled(!ragEnabled)}
+                  className={`w-11 h-6 rounded-full transition-colors ${
+                    ragEnabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 bg-white rounded-full transition-transform ${
+                      ragEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Step Tabs */}
+        <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
           <StepTabs
             currentStep={currentSession.currentStep}
             onStepChange={handleStepChange}
           />
+        </div>
 
-          {/* Chat View */}
+        {/* Chat View */}
+        <div className="flex-1 flex">
           <ChatView
             messages={currentMessages}
             onSendMessage={handleSendMessage}
@@ -346,26 +385,28 @@ export default function Home() {
             isLoading={isLoading}
             onUsageUpdate={handleUsageUpdate}
           />
-        </div>
 
-        {/* Meta Panel */}
-        <MetaPanel
-          citations={currentCitations}
-          finals={currentSessionFinals}
-          currentStep={currentSession.currentStep}
-          usage={currentSessionUsage}
-          modelId={selectedModel}
-        />
+          {/* Meta Panel */}
+          <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+            <MetaPanel
+              citations={currentCitations}
+              finals={currentSessionFinals}
+              currentStep={currentSession.currentStep}
+              usage={currentSessionUsage}
+              modelId={selectedModel}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Global Error Banner */}
       {error && (
-        <div className="bg-red-50 border-t border-red-200 text-red-700 px-4 py-3">
+        <div className="fixed bottom-4 right-4 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg shadow-lg max-w-md">
           <div className="flex items-center justify-between">
             <span>{error}</span>
             <button
               onClick={() => setError(null)}
-              className="text-red-500 hover:text-red-700 ml-4"
+              className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200 ml-4"
             >
               ×
             </button>

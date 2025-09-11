@@ -215,79 +215,143 @@ export default function ChatView({
   };
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="flex-1 overflow-y-auto p-6 space-y-6 max-w-4xl mx-auto w-full"
         aria-live="polite"
         onScroll={() => { if (isNearBottom()) setShowJumpToLatest(false); else setShowJumpToLatest(true); }}
       >
         {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] rounded-lg px-4 py-3 ${message.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-900 border border-gray-200'}`}>
+          <div key={message.id} className="group">
+            <div className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+              {/* Avatar */}
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                message.role === 'user' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-green-600 text-white'
+              }`}>
+                {message.role === 'user' ? 'U' : 'AI'}
+              </div>
+              
+              {/* Message Content */}
+              <div className={`flex-1 min-w-0 ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+                <div className={`inline-block max-w-[85%] rounded-2xl px-4 py-3 ${
+                  message.role === 'user' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                }`}>
               {message.role === 'user' ? (
-                <div>
-                  <div className="flex items-center gap-2">
+                  <div className="text-white">
+                    <div className="mb-2">{message.content}</div>
+                    <div className="flex items-center gap-2 text-xs opacity-75">
                     {typeof message.editCount === 'number' && (<span className="text-gray-200">Edited ×{message.editCount}</span>)}
-                    <button onClick={() => { setInputValue(message.content); textareaRef.current?.focus(); }} className="underline">Edit & Regenerate</button>
+                      <button 
+                        onClick={() => { setInputValue(message.content); textareaRef.current?.focus(); }} 
+                        className="underline hover:no-underline"
+                      >
+                        Edit
+                      </button>
+                    </div>
                   </div>
-                </div>
               ) : (
                 <div>
                   <Markdown content={message.content} />
                   {message.citations && message.citations.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Sources</h4>
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Sources</h4>
                       <div className="space-y-2">
                         {message.citations.map((citation, idx) => (
-                          <div key={idx} className="text-xs text-gray-600">
+                            <div key={idx} className="text-xs text-gray-600 dark:text-gray-400">
                             <span className="font-medium">{citation.title || citation.source}</span>
-                            {citation.excerpt && (<div className="mt-1 text-gray-500">{citation.excerpt}</div>)}
+                              {citation.excerpt && (<div className="mt-1 text-gray-500 dark:text-gray-500">{citation.excerpt}</div>)}
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-                  <div className="mt-3 flex gap-2">
-                    <button onClick={() => navigator.clipboard.writeText(message.content)} className="text-xs text-gray-500 hover:text-gray-700 transition-colors">Copy</button>
-                    <button onClick={() => onMarkFinal(message.content, message.model)} className="text-xs text-yellow-600 hover:text-yellow-800 transition-colors">Mark Final</button>
+                  </div>
+                )}
+                </div>
+                
+                {/* Action buttons */}
+                {message.role === 'assistant' && (
+                  <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => navigator.clipboard.writeText(message.content)} 
+                      className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Copy
+                    </button>
+                    <button 
+                      onClick={() => onMarkFinal(message.content, message.model)} 
+                      className="text-xs text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Mark Final
+                    </button>
                     {message.id === [...messages].reverse().find(m => m.role === 'assistant')?.id && (
-                      <button onClick={() => handleRegenerate()} className="text-xs text-blue-600 hover:text-blue-800 transition-colors">Regenerate</button>
+                      <button 
+                        onClick={() => handleRegenerate()} 
+                        className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        Regenerate
+                      </button>
                     )}
                   </div>
-                  {message.model && (<div className="mt-2 text-xs text-gray-400">via {models.find(m => m.id === message.model)?.label || message.model}</div>)}
-                </div>
-              )}
+                )}
+                
+                {message.model && message.role === 'assistant' && (
+                  <div className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                    via {models.find(m => m.id === message.model)?.label || message.model}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}
 
         {isStreaming && streamBuffer && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-lg px-4 py-3 bg-gray-50 text-gray-900 border border-gray-200">
+          <div className="group">
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-medium">
+                AI
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="inline-block max-w-[85%] rounded-2xl px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
               <Markdown content={streamBuffer} />
               {streamCitations && streamCitations.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Sources</h4>
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Sources</h4>
                   <div className="space-y-2">
                     {streamCitations.map((citation: any, idx: number) => (
-                      <div key={idx} className="text-xs text-gray-600"><span className="font-medium">{citation.title || citation.source}</span></div>
+                        <div key={idx} className="text-xs text-gray-600 dark:text-gray-400">
+                          <span className="font-medium">{citation.title || citation.source}</span>
+                        </div>
                     ))}
                   </div>
                 </div>
               )}
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {(isLoading || (isStreaming && !streamBuffer)) && (
-          <div className="flex justify-start">
-            <div className="bg-gray-50 text-gray-600 rounded-lg px-4 py-3 border border-gray-200">
+          <div className="group">
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-medium">
+                AI
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="inline-block rounded-2xl px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 <span className="ml-2 text-sm">Thinking...</span>
+              </div>
+                </div>
               </div>
             </div>
           </div>
@@ -297,31 +361,53 @@ export default function ChatView({
       </div>
 
       {error && (
-        <div className="mx-4 mb-2 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm flex items-center justify-between gap-3">
+        <div className="mx-6 mb-4 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg text-sm flex items-center justify-between gap-3">
           <span className="truncate">{error}</span>
           <div className="flex items-center gap-2">
-            <button onClick={() => { setError(null); handleRegenerate(); }} className="text-red-700 border border-red-300 rounded px-2 py-0.5 text-xs hover:bg-red-100">Retry</button>
-            <button onClick={() => setError(null)} aria-label="Dismiss error" className="text-red-500 hover:text-red-700">×</button>
+            <button 
+              onClick={() => { setError(null); handleRegenerate(); }} 
+              className="text-red-700 dark:text-red-200 border border-red-300 dark:border-red-600 rounded px-2 py-0.5 text-xs hover:bg-red-100 dark:hover:bg-red-800"
+            >
+              Retry
+            </button>
+            <button 
+              onClick={() => setError(null)} 
+              aria-label="Dismiss error" 
+              className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
-      {activity && !error && (<div className="mx-4 mb-2 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded text-xs">{activity}</div>)}
+      {activity && !error && (
+        <div className="mx-6 mb-4 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-200 px-4 py-3 rounded-lg text-sm">
+          {activity}
+        </div>
+      )}
 
-      <div className="border-t border-gray-200 p-4">
+      <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+        <div className="max-w-4xl mx-auto">
         {showSearch && (
-          <div className="fixed inset-0 z-40 flex items-start justify-center p-4 bg-black/20" onClick={() => setShowSearch(false)}>
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl border border-gray-200" onClick={(e)=>e.stopPropagation()}>
+            <div className="fixed inset-0 z-40 flex items-start justify-center p-4 bg-black/20" onClick={() => setShowSearch(false)}>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-200 dark:border-gray-700" onClick={(e)=>e.stopPropagation()}>
               <div className="border-b p-3">
-                <input value={searchQuery} onChange={(e)=>setSearchQuery(e.target.value)} placeholder="Search this conversation (Esc to close)" className="w-full outline-none text-sm px-2 py-1" autoFocus />
+                  <input 
+                    value={searchQuery} 
+                    onChange={(e)=>setSearchQuery(e.target.value)} 
+                    placeholder="Search this conversation (Esc to close)" 
+                    className="w-full outline-none text-sm px-2 py-1 bg-transparent text-gray-900 dark:text-gray-100" 
+                    autoFocus 
+                  />
               </div>
               <div className="max-h-80 overflow-y-auto">
                 {searchResults.length === 0 ? (
-                  <div className="p-3 text-sm text-gray-500">No matches</div>
+                    <div className="p-3 text-sm text-gray-500 dark:text-gray-400">No matches</div>
                 ) : (
                   searchResults.map((m)=> (
                     <div key={m.id} className="p-3 border-t first:border-t-0">
-                      <div className="text-xs text-gray-500 mb-1">{m.role} • {new Date(m.ts).toLocaleString()}</div>
-                      <div className="text-sm text-gray-800 whitespace-pre-wrap">{m.content}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{m.role} • {new Date(m.ts).toLocaleString()}</div>
+                        <div className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{m.content}</div>
                     </div>
                   ))
                 )}
@@ -331,15 +417,25 @@ export default function ChatView({
         )}
         {showJumpToLatest && (
           <div className="mb-2 flex justify-center">
-            <button onClick={() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); setShowJumpToLatest(false); }} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded px-3 py-1">Jump to latest</button>
+              <button 
+                onClick={() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); setShowJumpToLatest(false); }} 
+                className="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2"
+              >
+                Jump to latest
+              </button>
           </div>
         )}
-        <div className="flex gap-2 mb-2">
-          <button onClick={() => setAbCompareOpen(true)} className="text-sm text-blue-600 hover:text-blue-800 transition-colors">A/B Compare</button>
+          <div className="flex gap-3 mb-4">
+            <button 
+              onClick={() => setAbCompareOpen(true)} 
+              className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors px-3 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900"
+            >
+              A/B Compare
+            </button>
           {isStreaming && (
             <button
-              onClick={() => { abortRef.current?.abort(); setIsStreaming(false); setStreamBuffer(''); setStreamCitations(undefined); setActivity(''); }}
-              className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                onClick={() => { abortRef.current?.abort(); setIsStreaming(false); setStreamBuffer(''); setStreamCitations(undefined); setActivity(''); }}
+                className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors px-3 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
               aria-label="Stop streaming"
               title="Stop (Esc)"
             >
@@ -347,7 +443,7 @@ export default function ChatView({
             </button>
           )}
         </div>
-        <form onSubmit={(e) => handleSubmit(e)} className="flex gap-2 items-end">
+          <form onSubmit={(e) => handleSubmit(e)} className="flex gap-3 items-end">
           <textarea
             ref={textareaRef}
             value={inputValue}
@@ -361,40 +457,58 @@ export default function ChatView({
               else if (e.key === 'Escape' && isStreaming) { e.preventDefault(); abortRef.current?.abort(); }
             }}
             placeholder={ragEnabled ? "Ask about your documents..." : "Type your message..."}
-            className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            style={{ height: 'auto', maxHeight: '60vh', overflowY: 'auto' }}
+              className="flex-1 border border-gray-300 dark:border-gray-600 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
+              style={{ height: 'auto', maxHeight: '200px', overflowY: 'auto' }}
             disabled={false}
           />
           <button
             type="submit"
             disabled={!inputValue.trim()}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!inputValue.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+              className={`px-6 py-3 rounded-2xl text-sm font-medium transition-colors ${
+                !inputValue.trim() 
+                  ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
+              }`}
           >
             {isStreaming ? 'Queue' : 'Send'}
           </button>
         </form>
 
         {variants.length > 1 && (
-          <div className="mt-3">
-            <button className="text-xs text-gray-600 underline" onClick={() => setShowVersions(!showVersions)}>
+            <div className="mt-4">
+              <button 
+                className="text-xs text-gray-600 dark:text-gray-400 underline hover:no-underline" 
+                onClick={() => setShowVersions(!showVersions)}
+              >
               {showVersions ? 'Hide versions' : `Show versions (${variants.length})`}
             </button>
             {showVersions && (
-              <div className="mt-2 border border-gray-200 rounded">
+                <div className="mt-2 border border-gray-200 dark:border-gray-700 rounded-lg">
                 {variants.map((v, i) => (
-                  <div key={v.id} className="p-2 border-t first:border-t-0">
-                    <div className="text-xs text-gray-500 mb-1">Variant {i + 1} {v.model ? `• ${v.model}` : ''}</div>
+                    <div key={v.id} className="p-3 border-t first:border-t-0 dark:border-gray-700">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Variant {i + 1} {v.model ? `• ${v.model}` : ''}</div>
                     <div className="prose prose-sm max-w-none line-clamp-4">{v.content}</div>
-                    <div className="mt-2 flex gap-2">
-                      <button onClick={() => onSendMessage(v.content, v.model || selectedModel, 'assistant')} className="text-xs text-blue-600 hover:text-blue-800">Use this</button>
-                      <button onClick={() => navigator.clipboard.writeText(v.content)} className="text-xs text-gray-600 hover:text-gray-800">Copy</button>
+                      <div className="mt-2 flex gap-2">
+                        <button 
+                          onClick={() => onSendMessage(v.content, v.model || selectedModel, 'assistant')} 
+                          className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                        >
+                          Use this
+                        </button>
+                        <button 
+                          onClick={() => navigator.clipboard.writeText(v.content)} 
+                          className="text-xs text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          Copy
+                        </button>
+                      </div>
                     </div>
-                  </div>
                 ))}
               </div>
             )}
           </div>
         )}
+        </div>
       </div>
 
       <ABCompare

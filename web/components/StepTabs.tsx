@@ -27,18 +27,18 @@ export default function StepTabs({ currentStep, onStepChange }: StepTabsProps) {
   };
 
   return (
-    <div className="bg-white border-b border-gray-200">
-      <div className="flex items-center justify-between px-4 py-2">
+    <div className="bg-white dark:bg-gray-800">
+      <div className="flex items-center justify-between px-6 py-3">
         {/* Step Tabs */}
         <div className="flex">
           {STEPS.map((step) => (
             <button
               key={step.id}
               onClick={() => onStepChange(step.id)}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+              className={`px-4 py-2.5 text-sm font-medium rounded-lg mx-1 transition-colors ${
                 currentStep === step.id
-                  ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
               title={step.description}
             >
@@ -47,10 +47,10 @@ export default function StepTabs({ currentStep, onStepChange }: StepTabsProps) {
           ))}
         </div>
 
-  {/* Removed run button per request */}
+        {/* Removed run button per request */}
       </div>
       {/* Friendly description */}
-      <div className="px-4 pb-2 text-xs text-gray-600">
+      <div className="px-6 pb-3 text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50">
         {friendly[currentStep]}
       </div>
     </div>
