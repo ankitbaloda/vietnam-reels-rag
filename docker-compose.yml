@@ -80,7 +80,7 @@ services:
       - SQLITE_PATH=/tmp/database.sqlite
     ports:
       - "8000:8000"
-    entrypoint: ["bash", "-lc", "pip install -r requirements.txt && uvicorn server.app:app --host 0.0.0.0 --port 8000"]
+    entrypoint: ["bash", "-lc", "pip install -r requirements.txt && uvicorn server.app:app --host 0.0.0.0 --port 8000 --timeout-graceful-shutdown 150"]
   
   web:
     image: node:20-alpine
