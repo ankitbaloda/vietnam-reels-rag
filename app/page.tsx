@@ -100,7 +100,8 @@ export default function Home() {
       // TODO: Merge server history with local state
       // This would involve comparing timestamps and merging message arrays
     } catch (err) {
-      console.error('Failed to sync with server history:', err);
+      // Silently handle sync failures - this is not critical for app functionality
+      console.warn('Server history sync unavailable:', err instanceof Error ? err.message : 'Unknown error');
     }
   };
 
