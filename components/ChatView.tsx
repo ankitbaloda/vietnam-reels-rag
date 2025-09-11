@@ -57,30 +57,20 @@
 +      } else {
 +        const allMessages = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
 +        const systemMessage = { role: 'system', content: systemForStep(currentStep) };
-          if (ragEnabled) {
-            const resp = await sendRAGQuery({ 
-              query: userMessage, 
-              model: mId, 
-              top_k: topK, 
-              temperature, 
-              session_id: sessionId, 
-              step: currentStep 
-            });
-            return { content: resp.choices[0]?.message?.content || 'No response', citations: resp.citations };
-          } else {
-            const resp = await sendChatMessage({
++        
++        const response = await sendChatMessage({
++          model: selectedModel,
 +          messages: [systemMessage, ...allMessages],
-                messages: [
-                  { role: 'system', content: systemForStep(currentStep) },
-                  ...messages.map(m => ({ role: m.role, content: m.content })),
-                  { role: 'user', content: userMessage },
-                ],
++          temperature,
++          session_id: sessionId,
++          step: currentStep,
++        });
++        
 +        const content = response.choices[0]?.message?.content || 'No response generated';
 +        
 +        onSendMessage(content, selectedModel, 'assistant');
-            });
-            return { content: resp.choices[0]?.message?.content || 'No response', citations: undefined };
-          }
++        setVariants(v => [...v, { id: generateId(), content, model: selectedModel }]);
++        
 +        // Update usage if available
 +        if (response.usage && onUsageUpdate) {
 +          onUsageUpdate({
@@ -105,3 +95,5 @@
        }
      }
    };
+
+export default handleSubmit

@@ -13,3 +13,5 @@
 +    suno: 'Create custom music prompt for Suno AI based on script mood and duration.',
 +    handoff: 'Package everything for editor: idea, EDL, script, audio, and assembly instructions.',
    };
+
+export default friendly
