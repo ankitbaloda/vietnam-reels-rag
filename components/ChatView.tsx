@@ -16,17 +16,59 @@
      onSendMessage(userMsg.content, selectedModel, 'user');
      setLastUserMessage(userMsg.content);
 
+    
      try {
 -      setActivity('Thinking…');
 -      setIsStreaming(true);
 -      const url = ragEnabled ? '/api/rag/chat/stream' : '/api/chat/stream';
 -      const body = ragEnabled
--        ? { query: userMessage, model: selectedModel, top_k: topK, temperature, session_id: sessionId, step: currentStep }
--        : { model: selectedModel, messages: [ { role: 'system', content: systemForStep(currentStep) }, ...[...messages, userMsg].map(m => ({ role: m.role, content: m.content })) ], temperature, session_id: sessionId, step: currentStep };
 -      startStream(url, body, (finalText) => {
 -        onSendMessage(finalText, selectedModel, 'assistant', streamCitations);
 -        setVariants(v => [...v, { id: generateId(), content: finalText, model: selectedModel }]);
 -      });
+      setIsGeneratingResponse(true);
+      
+      const response = ragEnabled
+        ? await sendRAGQuery({ query: prompt, model: selectedModel, top_k: topK, temperature, session_id: sessionId, step: currentStep })
+        : await sendChatMessage({
+            model: selectedModel,
+            messages: [
+              { role: 'system', content: systemForStep(currentStep) },
+              ...messages.filter(m => m.role !== 'assistant').map(m => ({ role: m.role, content: m.content })),
+              { role: 'user', content: prompt }
+            ] as any,
+            temperature,
+            session_id: sessionId,
+            step: currentStep,
+          });
+
+      const finalText = response.choices[0]?.message?.content || 'No response';
+      const citations = ragEnabled ? (response as RAGResponse).citations : undefined;
+      
+      onSendMessage(finalText, selectedModel, 'assistant', citations);
+      setVariants(v => [...v, { id: generateId(), content: finalText, model: selectedModel }]);
+      setActivity('');
+      setIsGeneratingResponse(true);
+      
+      const response = ragEnabled
+        ? await sendRAGQuery({ query: userMessage, model: selectedModel, top_k: topK, temperature, session_id: sessionId, step: currentStep })
+        : await sendChatMessage({
+            model: selectedModel,
+            messages: [
+              { role: 'system', content: systemForStep(currentStep) },
+              ...[...messages, userMsg].map(m => ({ role: m.role, content: m.content }))
+            ] as any,
+            temperature,
+            session_id: sessionId,
+            step: currentStep,
+          });
+
+      const finalText = response.choices[0]?.message?.content || 'No response';
+      const citations = ragEnabled ? (response as RAGResponse).citations : undefined;
+      
+      onSendMessage(finalText, selectedModel, 'assistant', citations);
+      setVariants(v => [...v, { id: generateId(), content: finalText, model: selectedModel }]);
+      setActivity('');
 +      setActivity('Processing with RAG system...');
 +      setIsStreaming(true);
 +      
@@ -57,35 +99,20 @@
 +      } else {
 +        const allMessages = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
 +        const systemMessage = { role: 'system', content: systemForStep(currentStep) };
-+        
-+        const response = await sendChatMessage({
-+          model: selectedModel,
-+          messages: [systemMessage, ...allMessages],
-+          temperature,
-+          session_id: sessionId,
-+          step: currentStep,
-+        });
-+        
-+        const content = response.choices[0]?.message?.content || 'No response generated';
-+        
-+        onSendMessage(content, selectedModel, 'assistant');
-+        setVariants(v => [...v, { id: generateId(), content, model: selectedModel }]);
-+        
-+        // Update usage if available
-+        if (response.usage && onUsageUpdate) {
-+          onUsageUpdate({
-+            promptTokens: response.usage.prompt_tokens,
-+            completionTokens: response.usage.completion_tokens,
-+          });
-+        }
 +      }
      } catch (err) {
        console.error('Chat error:', err);
+    if (isGeneratingResponse) { setQueuedPrompt(inputValue.trim()); return; }
        const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
        setError(errorMessage);
 -      setIsStreaming(false);
+      setActivity('');
+    } finally {
+      setIsGeneratingResponse(false);
+      setActivity('');
      } finally {
-+      setIsStreaming(false);
+      setIsGeneratingResponse(false);
+      if (queuedPrompt) { const qp = queuedPrompt; setQueuedPrompt(null); setInputValue(qp); Promise.resolve().then(() => handleSubmit()); }
 +      setActivity('');
        if (!isStreaming && queuedPrompt) { 
          const qp = queuedPrompt; 

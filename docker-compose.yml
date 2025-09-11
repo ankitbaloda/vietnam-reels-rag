@@ -68,6 +68,8 @@ services:
   server:
     image: python:3.12-slim
     container_name: reelsrag-server
+    depends_on:
+      - qdrant
     working_dir: /workspace
     volumes:
       - ./:/workspace
