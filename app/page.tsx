@@ -70,7 +70,7 @@ export default function Home() {
         const items = modelsData.items || [];
         setModels(items);
 
-        // Prefer GPT‑5 mini by id or label, else recommended, else first
+        // Prefer GPT-5 mini by id or label, else recommended, else first
         const preferOrder = ['openai/gpt-5-mini', 'gpt-5-mini', 'openai/gpt-4o-mini', 'gpt-4o-mini'];
         const byId = preferOrder.map(id => items.find(m => m.id === id)).find(Boolean);
         const byLabel = items.find(m => (m.label || '').toLowerCase().includes('gpt-5') && (m.label || '').toLowerCase().includes('mini'));

@@ -31,7 +31,8 @@ app.add_middleware(
         "https://localhost:3001",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
-        "https://*.app.github.dev"
+        "https://*.app.github.dev",
+        "*"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -264,6 +265,117 @@ async def chat_completion(request: ChatRequest):
     except Exception as e:
         logger.error(f"Chat completion error: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@app.post("/chat/stream")
+async def chat_stream(request: ChatRequest):
+    """Streaming chat completion endpoint"""
+    from fastapi.responses import StreamingResponse
+    import json
+    
+    try:
+        client = get_openai_client()
+        
+        # Prepare messages
+        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
+        
+        def generate():
+            try:
+                # For now, return non-streaming response in SSE format
+                response = client.chat.completions.create(
+                    model=request.model,
+                    messages=messages,
+                    temperature=request.temperature,
+                    max_tokens=4000
+                )
+                
+                content = response.choices[0].message.content or ""
+                
+                # Send content as SSE
+                yield f"event: message\ndata: {json.dumps({'delta': content})}\n\n"
+                yield f"event: done\ndata: {json.dumps({'finish_reason': 'stop'})}\n\n"
+                
+            except Exception as e:
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+        
+        return StreamingResponse(generate(), media_type="text/plain")
+        
+    except Exception as e:
+        logger.error(f"Chat stream error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/rag/chat/stream")
+async def rag_chat_stream(request: RAGRequest):
+    """Streaming RAG chat endpoint"""
+    from fastapi.responses import StreamingResponse
+    import json
+    
+    try:
+        def generate():
+            try:
+                # Import pipeline functions
+                try:
+                    from scripts.run_pipeline import retrieve_context, chat_complete
+                    
+                    # Get context
+                    context = retrieve_context(request.query, top_k=request.top_k or 8)
+                    system_prompt = f"You are a helpful assistant for travel content creation. Use the following context to answer questions:\n\n{context}"
+                    
+                    # Generate response
+                    response_content = chat_complete(
+                        system=system_prompt,
+                        user=request.query,
+                        model=request.model,
+                        temperature=request.temperature or 0.7
+                    )
+                    
+                    # Extract citations
+                    citations = []
+                    if context:
+                        sources = []
+                        for line in context.split('\n'):
+                            if line.startswith('SOURCE:'):
+                                source_name = line.replace('SOURCE:', '').strip()
+                                if source_name not in sources:
+                                    sources.append(source_name)
+                                    citations.append({
+                                        "source": source_name,
+                                        "title": source_name.split('/')[-1],
+                                        "excerpt": ""
+                                    })
+                    
+                    # Send citations first
+                    if citations:
+                        yield f"event: context\ndata: {json.dumps({'citations': citations})}\n\n"
+                    
+                    # Send content
+                    yield f"event: message\ndata: {json.dumps({'delta': response_content})}\n\n"
+                    yield f"event: done\ndata: {json.dumps({'finish_reason': 'stop'})}\n\n"
+                    
+                except ImportError:
+                    # Fallback without RAG
+                    client = get_openai_client()
+                    response = client.chat.completions.create(
+                        model=request.model,
+                        messages=[
+                            {"role": "system", "content": "You are a helpful assistant for travel content creation."},
+                            {"role": "user", "content": request.query}
+                        ],
+                        temperature=request.temperature,
+                        max_tokens=4000
+                    )
+                    
+                    content = response.choices[0].message.content or ""
+                    yield f"event: message\ndata: {json.dumps({'delta': content})}\n\n"
+                    yield f"event: done\ndata: {json.dumps({'finish_reason': 'stop'})}\n\n"
+                    
+            except Exception as e:
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+        
+        return StreamingResponse(generate(), media_type="text/plain")
+        
+    except Exception as e:
+        logger.error(f"RAG stream error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/rag/chat")
 async def rag_chat(request: RAGRequest):
