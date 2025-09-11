@@ -16,8 +16,12 @@ logger = logging.getLogger(__name__)
 import httpx
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables at startup
 load_dotenv()
+
+# Verify API keys are loaded
+logger.info(f"OpenRouter API Key loaded: {'Yes' if os.getenv('OPENROUTER_API_KEY') else 'No'}")
+logger.info(f"OpenAI API Key loaded: {'Yes' if os.getenv('OPENAI_API_KEY') else 'No'}")
 
 app = FastAPI(title="Reels RAG API", version="1.0.0")
 
@@ -101,8 +105,13 @@ class PipelineRequest(BaseModel):
 # OpenRouter/OpenAI client setup
 def get_openai_client():
     """Get OpenAI-compatible client with OpenRouter primary, OpenAI fallback"""
+    # Reload environment variables to ensure they're fresh
+    load_dotenv()
+    
     # Try OpenRouter first
     or_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    logger.info(f"Attempting OpenRouter with key: {or_key[:10]}..." if or_key else "No OpenRouter key found")
+    
     if or_key:
         try:
             from openai import OpenAI
@@ -113,6 +122,7 @@ def get_openai_client():
             if os.getenv("OPENROUTER_APP_NAME"):
                 headers["X-Title"] = os.getenv("OPENROUTER_APP_NAME")
             
+            logger.info(f"Creating OpenRouter client with base_url: {base_url}")
             return OpenAI(
                 base_url=base_url,
                 api_key=or_key,
@@ -125,6 +135,8 @@ def get_openai_client():
     
     # Fallback to OpenAI
     openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    logger.info(f"Attempting OpenAI fallback with key: {openai_key[:10]}..." if openai_key else "No OpenAI key found")
+    
     if openai_key:
         try:
             from openai import OpenAI
@@ -132,12 +144,15 @@ def get_openai_client():
         except Exception as e:
             logger.error(f"OpenAI client failed: {e}")
     
-    raise HTTPException(status_code=500, detail="No valid API keys configured")
+    logger.error("No valid API keys found in environment")
+    raise HTTPException(status_code=500, detail="No valid API keys configured. Please check OPENROUTER_API_KEY or OPENAI_API_KEY in .env file")
 
 async def fetch_openrouter_models():
     """Fetch models from OpenRouter API"""
+    load_dotenv()  # Ensure fresh environment variables
     or_key = os.getenv("OPENROUTER_API_KEY", "").strip()
     if not or_key:
+        logger.warning("No OpenRouter API key found for model fetching")
         return []
     
     try:
@@ -151,8 +166,10 @@ async def fetch_openrouter_models():
         if os.getenv("OPENROUTER_APP_NAME"):
             headers["X-Title"] = os.getenv("OPENROUTER_APP_NAME")
         
+        logger.info(f"Fetching models from: {base_url}/models")
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{base_url}/models", headers=headers, timeout=60.0)
+            logger.info(f"Models API response status: {response.status_code}")
             if response.status_code == 200:
                 data = response.json()
                 models = []
@@ -168,7 +185,10 @@ async def fetch_openrouter_models():
                             "anthropic/claude-3-5-sonnet", "google/gemini-pro"
                         ]
                     })
+                logger.info(f"Successfully fetched {len(models)} models")
                 return models
+            else:
+                logger.error(f"Models API returned {response.status_code}: {response.text}")
     except Exception as e:
         logger.error(f"Failed to fetch OpenRouter models: {e}")
     
@@ -225,6 +245,7 @@ async def get_models():
 async def chat_completion(request: ChatRequest):
     """Generic chat completion endpoint"""
     try:
+        logger.info(f"Chat request for model: {request.model}")
         client = get_openai_client()
         
         # Prepare messages
@@ -232,12 +253,14 @@ async def chat_completion(request: ChatRequest):
         
         # Make API call
         try:
+            logger.info(f"Making API call with {len(messages)} messages")
             response = client.chat.completions.create(
                 model=request.model,
                 messages=messages,
                 temperature=request.temperature,
                 max_tokens=4000
             )
+            logger.info("API call successful")
         except Exception as api_error:
             logger.error(f"API call failed: {api_error}")
             raise HTTPException(status_code=503, detail=f"LLM API unavailable: {str(api_error)}")
@@ -380,10 +403,12 @@ async def rag_chat_stream(request: RAGRequest):
 async def rag_chat(request: RAGRequest):
     """RAG-enabled chat endpoint"""
     try:
+        logger.info(f"RAG request for model: {request.model}, query: {request.query[:100]}...")
         # Import pipeline functions
         try:
             from scripts.run_pipeline import retrieve_context, get_openai_client as pipeline_client, chat_complete
         except ImportError:
+            logger.warning("Pipeline not available, using fallback")
             # Fallback if pipeline not available
             client = get_openai_client()
             try:
