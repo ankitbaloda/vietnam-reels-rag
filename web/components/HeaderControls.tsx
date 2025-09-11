@@ -13,8 +13,17 @@ interface HeaderControlsProps {
   onTopKChange: (topK: number) => void;
   temperature: number;
   onTemperatureChange: (t: number) => void;
+  persona: string;
+  onPersonaChange: (persona: string) => void;
+  trip: string;
+  onTripChange: (trip: string) => void;
   sessionTitle?: string;
   onSessionTitleChange?: (title: string) => void;
+  sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
+  onShowDashboard: () => void;
+  usage?: { promptTokens?: number; completionTokens?: number };
+  modelId?: string;
 }
 
 export default function HeaderControls(props: HeaderControlsProps) {
@@ -27,8 +36,17 @@ export default function HeaderControls(props: HeaderControlsProps) {
     onTopKChange,
     temperature,
     onTemperatureChange,
+    persona,
+    onPersonaChange,
+    trip,
+    onTripChange,
   sessionTitle,
   onSessionTitleChange,
+    sidebarCollapsed,
+    onToggleSidebar,
+    onShowDashboard,
+    usage,
+    modelId,
   } = props;
 
   const [models, setModels] = useState<ModelItem[]>([]);
@@ -95,31 +113,48 @@ export default function HeaderControls(props: HeaderControlsProps) {
   const others = filtered.filter((m: ModelItem) => !m.recommended);
 
   return (
-    <div className="bg-white border-b border-gray-200 p-4">
-      <div className="flex flex-wrap items-center gap-4">
-        {/* Conversation title */}
-        <div className="flex items-center gap-2 mr-4">
+    <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+      {/* Top Row */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          {sidebarCollapsed && (
+            <button
+              onClick={onToggleSidebar}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          )}
           <input
             type="text"
             value={sessionTitle ?? ''}
             onChange={(e) => onSessionTitleChange?.(e.target.value)}
             placeholder="Untitled conversation"
-            className="text-base md:text-lg font-semibold text-gray-900 border-b border-transparent focus:border-blue-400 outline-none bg-transparent px-1"
+            className="text-lg font-semibold text-gray-900 dark:text-white border-b border-transparent focus:border-blue-400 outline-none bg-transparent px-1"
             aria-label="Conversation title"
           />
         </div>
-        {/* RAG Toggle */}
-        <div className="flex items-center gap-2" title="Use your documents to ground answers (Recommended)">
-          <label className="text-sm font-medium text-gray-700">RAG</label>
+        
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => onRAGToggle(!ragEnabled)}
-            className={`w-10 h-6 rounded-full transition-colors ${ragEnabled ? "bg-blue-600" : "bg-gray-300"}`}
+            onClick={onShowDashboard}
+            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 px-3 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
           >
-            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${ragEnabled ? "translate-x-5" : "translate-x-1"}`} />
+            Dashboard
           </button>
+          {usage && (usage.promptTokens || usage.completionTokens) && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+              {((usage.promptTokens || 0) + (usage.completionTokens || 0)).toLocaleString()} tokens
+            </div>
+          )}
         </div>
+      </div>
 
-  {/* Model */}
+      {/* Controls Row */}
+      <div className="flex flex-wrap items-center gap-4">
+        {/* Model */}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-gray-700">Model:</label>
           <select
@@ -155,13 +190,51 @@ export default function HeaderControls(props: HeaderControlsProps) {
           </select>
         </div>
 
+        {/* Persona */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Persona:</label>
+          <select
+            value={persona}
+            onChange={(e) => onPersonaChange(e.target.value)}
+            className="text-sm border border-gray-300 rounded px-2 py-1"
+          >
+            <option value="Vipin">Vipin</option>
+            <option value="Divya">Divya</option>
+            <option value="Both">Both</option>
+            <option value="Freehand">Freehand</option>
+          </select>
+        </div>
+
+        {/* Trip */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Trip:</label>
+          <input
+            type="text"
+            value={trip}
+            onChange={(e) => onTripChange(e.target.value)}
+            className="text-sm border border-gray-300 rounded px-2 py-1 w-24"
+            placeholder="vietnam"
+          />
+        </div>
+
+        {/* RAG Toggle */}
+        <div className="flex items-center gap-2" title="Use your documents to ground answers (Recommended)">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">RAG</label>
+          <button
+            onClick={() => onRAGToggle(!ragEnabled)}
+            className={`w-10 h-6 rounded-full transition-colors ${ragEnabled ? "bg-blue-600" : "bg-gray-300"}`}
+          >
+            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${ragEnabled ? "translate-x-5" : "translate-x-1"}`} />
+          </button>
+        </div>
+
         {/* Theme */}
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">Theme:</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Theme:</label>
           <select
             value={theme}
             onChange={(e) => setTheme(e.target.value as any)}
-            className="text-sm border border-gray-300 rounded px-2 py-1"
+            className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             aria-label="Theme selector"
           >
             <option value="system">System</option>
@@ -232,7 +305,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
               onChange={(e) => onTemperatureChange(Number(e.target.value))}
               min={0}
               max={2}
-              step={0.1}
+              max={50}
               className="text-sm border border-gray-300 rounded px-2 py-1 w-16"
             />
           </div>

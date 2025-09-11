@@ -16,6 +16,8 @@ interface ChatViewProps {
   ragEnabled: boolean;
   topK: number;
   temperature: number;
+  persona: string;
+  trip: string;
   sessionId?: string;
   currentStep: StepId;
   models: ModelItem[];
@@ -31,6 +33,8 @@ export default function ChatView({
   ragEnabled,
   topK,
   temperature,
+  persona,
+  trip,
   sessionId,
   currentStep,
   models,
