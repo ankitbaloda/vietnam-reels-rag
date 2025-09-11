@@ -220,14 +220,15 @@ export default function Home() {
     } else {
       updatedMessages.push(message);
     }
-  // Auto-name session from first user message across all steps, if still default
-  const totalMsgsBefore = Object.values(currentSession.messagesByStep || {}).reduce((acc, arr) => acc + (arr?.length || 0), 0);
-  const shouldAutoName = role === 'user' && totalMsgsBefore === 0 && (!currentSession.name || currentSession.name.startsWith('Session '));
+    // Auto-name session from first user message across all steps, if still default
+    const totalMsgsBefore = Object.values(currentSession.messagesByStep || {}).reduce((acc, arr) => acc + (arr?.length || 0), 0);
+    const shouldAutoName = role === 'user' && totalMsgsBefore === 0 && (!currentSession.name || currentSession.name === 'New Chat');
     const autoName = shouldAutoName
       ? (() => {
-          const base = content.trim().replace(/\s+/g, ' ').slice(0, 60);
-          const cleaned = base.replace(/[\n\r\t]+/g, ' ').replace(/[#*`_>\[\](){}]|\|/g, '').trim();
-          return cleaned || currentSession.name;
+          // Generate 2-4 word summary from first user message
+          const words = content.trim().split(/\s+/).slice(0, 4);
+          const summary = words.join(' ');
+          return summary.length > 50 ? summary.slice(0, 47) + '...' : summary;
         })()
       : currentSession.name;
     const updatedSession = {

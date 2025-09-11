@@ -156,11 +156,11 @@ export default function HeaderControls(props: HeaderControlsProps) {
       <div className="flex flex-wrap items-center gap-4">
         {/* Model */}
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">Model:</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Model:</label>
           <select
             value={selectedModel}
             onChange={(e) => onModelChange(e.target.value)}
-            className="text-sm border border-gray-300 rounded px-2 py-1 min-w-40"
+            className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 min-w-40 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             disabled={loading}
           >
             {loading ? (
@@ -178,7 +178,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
                     ))}
                   </optgroup>
                 )}
-                <optgroup label="All">
+                <optgroup label="Other Models">
                   {others.map((m: ModelItem) => (
                     <option key={m.id} value={m.id}>
                       {m.label || m.id}
@@ -196,7 +196,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
           <select
             value={persona}
             onChange={(e) => onPersonaChange(e.target.value)}
-            className="text-sm border border-gray-300 rounded px-2 py-1"
+            className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
             <option value="Vipin">Vipin</option>
             <option value="Divya">Divya</option>
@@ -212,7 +212,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
             type="text"
             value={trip}
             onChange={(e) => onTripChange(e.target.value)}
-            className="text-sm border border-gray-300 rounded px-2 py-1 w-24"
+            className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             placeholder="vietnam"
           />
         </div>
@@ -255,11 +255,11 @@ export default function HeaderControls(props: HeaderControlsProps) {
       {showAdvanced && (
         <div className="mt-3 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Provider:</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Provider:</label>
             <select
               value={providerFilter}
               onChange={(e) => setProviderFilter(e.target.value)}
-              className="text-sm border border-gray-300 rounded px-2 py-1"
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="all">All</option>
               {providers.map((p: string) => (
@@ -271,11 +271,11 @@ export default function HeaderControls(props: HeaderControlsProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Cost:</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Cost:</label>
             <select
               value={costFilter}
               onChange={(e) => setCostFilter(e.target.value as "all" | "free" | "paid")}
-              className="text-sm border border-gray-300 rounded px-2 py-1"
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="all">All</option>
               <option value="free">Free</option>
@@ -285,28 +285,28 @@ export default function HeaderControls(props: HeaderControlsProps) {
 
           {ragEnabled && (
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Top K:</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Top K:</label>
               <input
                 type="number"
                 value={topK}
                 onChange={(e) => onTopKChange(Number(e.target.value))}
                 min={1}
                 max={20}
-                className="text-sm border border-gray-300 rounded px-2 py-1 w-16"
+                className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-16 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
           )}
 
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Temp:</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Temp:</label>
             <input
               type="number"
               value={temperature}
               onChange={(e) => onTemperatureChange(Number(e.target.value))}
               min={0}
               max={2}
-              max={50}
-              className="text-sm border border-gray-300 rounded px-2 py-1 w-16"
+              step={0.1}
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-16 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
           </div>
         </div>

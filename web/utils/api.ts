@@ -76,36 +76,37 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
 // Models API
 export async function fetchModels(): Promise<{ models: string[]; items: ModelItem[] }> {
   try {
-    return await apiCall('/models');
+    const data = await apiCall('/models');
+    return data;
   } catch (error) {
     // Provide fallback models when backend is unavailable
     console.warn('Backend unavailable, using fallback models:', error);
     return {
-      models: ['gpt-3.5-turbo', 'gpt-4', 'claude-3-sonnet'],
+      models: ['openrouter/gpt-5-mini', 'openrouter/gpt-4o-mini', 'openrouter/claude-3-5-sonnet'],
       items: [
         {
-          id: 'gpt-3.5-turbo',
+          id: 'openrouter/gpt-5-mini',
           provider: 'OpenAI',
-          label: 'GPT-3.5 Turbo',
+          label: 'GPT-5 Mini',
           free: true,
           paid: false,
           recommended: true
         },
         {
-          id: 'gpt-4',
+          id: 'openrouter/gpt-4o-mini',
           provider: 'OpenAI',
-          label: 'GPT-4',
+          label: 'GPT-4o Mini',
           free: false,
           paid: true,
           recommended: true
         },
         {
-          id: 'claude-3-sonnet',
+          id: 'openrouter/claude-3-5-sonnet',
           provider: 'Anthropic',
-          label: 'Claude 3 Sonnet',
+          label: 'Claude 3.5 Sonnet',
           free: false,
           paid: true,
-          recommended: false
+          recommended: true
         }
       ]
     };

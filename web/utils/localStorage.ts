@@ -65,7 +65,7 @@ export function createNewSession(name?: string): Session {
   const id = generateId();
   return {
     id,
-    name: name || `Session ${new Date().toLocaleDateString()}`,
+    name: name || 'New Chat',
     createdAt: Date.now(),
     currentStep: 'ideation',
     messagesByStep: {
