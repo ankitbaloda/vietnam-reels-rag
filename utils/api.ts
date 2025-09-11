@@ -47,7 +47,7 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
         throw new Error(errorMessage);
       }
 
-      return await response.json();
+      return response.json() as T;
     } catch (error) {
       if (attempt >= maxRetries) {
         if (error instanceof TypeError && error.message.includes('fetch')) {
