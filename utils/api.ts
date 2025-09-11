@@ -67,7 +67,7 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
 // Models API
 export async function fetchModels(): Promise<{ models: string[]; items: ModelItem[] }> {
   try {
-    return await apiCall('/models');
+    const data = await apiCall<{ models: string[]; items: ModelItem[] }>('/models');
   } catch (error) {
     console.warn('Backend unavailable, using fallback models:', error);
     // Provide comprehensive fallback models
