@@ -19,6 +19,8 @@ import HeaderControls from '../components/HeaderControls';
 import StepTabs from '../components/StepTabs';
 import ChatView from '../components/ChatView';
 import MetaPanel from '../components/MetaPanel';
+import RightPanel from '../components/RightPanel';
+import Dashboard from '../components/Dashboard';
 
 export default function Home() {
   // State management
