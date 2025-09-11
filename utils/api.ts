@@ -21,7 +21,6 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
   while (attempt <= maxRetries) {
     try {
       const response = await fetch(`${apiBase}${endpoint}`, {
-        headers: {
           'Content-Type': 'application/json',
           ...options?.headers,
         },
