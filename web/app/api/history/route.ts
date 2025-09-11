@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = request.nextUrl.searchParams;
     const queryString = searchParams.toString();
     
     // Try to forward to backend
     const response = await fetch(`http://server:8000/history?${queryString}`, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Origin': 'http://web:3000',
       },
     });
 
