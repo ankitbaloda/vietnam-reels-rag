@@ -3,8 +3,10 @@
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
-  "ghcr.io/devcontainers/features/python:1": {},
-  "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/python:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/desktop-lite:1": {}
   },
   "customizations": {
     "vscode": {
@@ -22,12 +24,19 @@
       }
     }
   },
-  "forwardPorts": [3000, 6333],
+  "forwardPorts": [3000, 3001, 8000, 6333],
   "portsAttributes": {
     "3000": { "label": "Flowise" },
+    "3001": { "label": "Web UI" },
+    "8000": { "label": "API" },
     "6333": { "label": "Qdrant" }
   },
   "remoteUser": "vscode",
-  "postCreateCommand": "bash -lc 'if [ ! -f .env ] && [ -f .env.example ]; then cp .env.example .env; fi; python3 -m pip install -U pip >/dev/null 2>&1 || true; if [ -f requirements.txt ]; then pip3 install -r requirements.txt || true; fi'",
+  "containerEnv": {
+    "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
+    "PUPPETEER_EXECUTABLE_PATH": "/usr/bin/chromium-browser",
+    "DISPLAY": ":0"
+  },
+  "postCreateCommand": "bash -lc 'if [ ! -f .env ] && [ -f .env.example ]; then cp .env.example .env; fi; python3 -m pip install -U pip >/dev/null 2>&1 || true; if [ -f requirements.txt ]; then pip3 install -r requirements.txt || true; fi; echo \"Installing browser dependencies...\"; apt update && apt install -y libglib2.0-0 libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libasound2 libgtk-3-0 libx11-xcb1 libxcb-dri3-0 libxcb-shm0 libxcb1 libpangocairo-1.0-0 libatk1.0-0 libcairo-gobject2 libgdk-pixbuf2.0-0 || echo \"Browser dependencies installation failed, but continuing...\"'",
   "postStartCommand": "bash -lc 'echo Dev container ready. Use: docker compose up -d'"
 }

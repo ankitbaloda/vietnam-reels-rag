@@ -56,6 +56,10 @@ jobs:
       - name: Run indexer
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_BASE_URL: ${{ secrets.OPENROUTER_BASE_URL }}
+          OPENROUTER_SITE_URL: ${{ secrets.OPENROUTER_SITE_URL }}
+          OPENROUTER_APP_NAME: ReelsRAG-CI
           QDRANT_URL: http://localhost:6333
           QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
         run: |

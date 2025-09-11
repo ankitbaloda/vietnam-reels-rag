@@ -1,0 +1,23 @@
+{
+  "chatflows": [
+    {
+      "name": "01_Ideation_And_EDL",
+      "isPublic": false,
+      "flowData": "{\"nodes\":[{\"id\":\"ingest-guard\",\"type\":\"Prompt\",\"data\":{\"mode\":\"system\",\"prompt\":\"@/app/flows_prompts/00_ingest_guardrail.md\"}},{\"id\":\"csv-loader-travel\",\"type\":\"Document Loader\",\"data\":{\"loader\":\"CSV\",\"path\":\"/app/data/source/Travel Files Directory.csv\",\"csvDelimiter\":\",\"}}],\"edges\":[]}"
+    },
+    {
+      "name": "03_Suno_Prompt",
+      "isPublic": false,
+      "flowData": "{\"nodes\":[{\"id\":\"prompt-suno\",\"type\":\"Prompt\",\"data\":{\"mode\":\"system\",\"prompt\":\"@/app/flows_prompts/03_suno_prompt.md\"}},{\"id\":\"llm-openai\",\"type\":\"LLM\",\"data\":{\"provider\":\"openai\",\"model\":\"gpt-4o-mini\",\"temperature\":0.5}},{\"id\":\"input-script\",\"type\":\"Chat Input\",\"data\":{\"label\":\"Paste Final Script + VO durations + Idea Card\"}},{\"id\":\"output\",\"type\":\"Chat Output\",\"data\":{}}],\"edges\":[{\"source\":\"prompt-suno\",\"target\":\"llm-openai\"},{\"source\":\"input-script\",\"target\":\"llm-openai\"},{\"source\":\"llm-openai\",\"target\":\"output\"}]}"
+    },
+    {
+      "name": "04_Editor_Handoff",
+      "isPublic": false,
+      "flowData": "{\"nodes\":[{\"id\":\"prompt-handoff\",\"type\":\"Prompt\",\"data\":{\"mode\":\"system\",\"prompt\":\"@/app/flows_prompts/04_editor_handoff.md\"}},{\"id\":\"llm-openai\",\"type\":\"LLM\",\"data\":{\"provider\":\"openai\",\"model\":\"gpt-4o-mini\",\"temperature\":0.3}},{\"id\":\"input-pack\",\"type\":\"Chat Input\",\"data\":{\"label\":\"Paste Idea Card + Script (with VO) + EDL + Suno Prompt\"}},{\"id\":\"output\",\"type\":\"Chat Output\",\"data\":{}}],\"edges\":[{\"source\":\"prompt-handoff\",\"target\":\"llm-openai\"},{\"source\":\"input-pack\",\"target\":\"llm-openai\"},{\"source\":\"llm-openai\",\"target\":\"output\"}]}"
+    }
+  ],
+  "tools": [],
+  "credentials": [],
+  "variables": [],
+  "documentStores": []
+}

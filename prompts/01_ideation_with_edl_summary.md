@@ -15,7 +15,7 @@ Rules:
 - Ideation MUST be based on reading ALL rows in Travel Files Directory.csv (especially enrichment_input_raw and story_description) and Vietnam Daywise Narrations Transcripts.txt to infer viable viral ideas that match the Master Playbook patterns.
 - Before proposing ideas, internally analyze the available footage themes (prefer videos over photos) and day-wise beats, then pick ideas that are maximally supported by real clips already present.
 - Story Breakdown MUST be strictly supported by available clips via story_description and enrichment_input_raw from Travel Files Directory.csv.
-- EDL in this step: provide the alignment now (since you already analyzed the files). For each mini‑chapter, divide total shots across the chapter; for each shot list exactly ONE best candidate clip from Travel Files Directory.csv (no placeholders), including filename, clip_id, full story_description, and key metadata.
+- EDL in this step: DO NOT produce a full EDL. Instead, produce an EDL Summary (see Output Structure 6) that allocates shots per chapter (counts, 1‑line intents, target cuts/30s per chapter) without listing filenames or clip metadata.
 - Viral Blueprint numbers (shots/30s, pacing, hooks) MUST align with the Playbook.
 - Do not hallucinate places, clips, or costs not present in the sources.
 - If the user’s request cannot be met due to missing clips, explain which segment is impossible and suggest nearest alternatives from available clips.
@@ -24,7 +24,6 @@ Media prioritization and quality gating:
 - Prefer videos for all shots. Use photos only as micro-bursts when the story needs a quick stitch (e.g., 1-second montage of 3–5 photos). Keep photo usage to the bare minimum; aim near 0% of total shots and never exceed ~10%.
 - Rank and pick clips using positive cues in enrichment_input_raw and other metadata (e.g., stable/gimbal, joyful/emotion_to_highlight, high ai_score, clear notes_human). Avoid clips with negative cues (blurry, shaky, noisy, low-light unusable). If two candidates tie, pick the longer, more stable video.
 - When the user mentions “favorite/best” or there are positive annotations in enrichment_input_raw or notes_human, prioritize those clips first.
-
 
 Coverage discipline:
 - Cross-check scenes with the Travel Files Directory; if a scene is mentioned but not present, exclude it.
@@ -55,15 +54,16 @@ Output Structure (Idea Card):
 - Target shots/30s
 - Pacing style
 - Hook style – 3 variations (match Playbook categories; e.g., Budget/Mistake/Reality)
-6) EDL Alignment (Do this now, tightly coupled to the ideation)
+6) EDL Summary (Do NOT output a full EDL here)
 For each mini‑chapter and its shots:
-- Shot intent (1 line)
-- ONE best candidate clip only, with: filename, clip_id, duration_sec (approx), mood, time_of_day, people, full story_description, location_human, day_segment, emotion_to_highlight, media_type
-– Prefer videos when available; only use photos if no video matches the intent.
+- Shot plan: total planned shots for the chapter and 1‑line intents for each shot
+- Target cuts/30s per chapter (open/mid/payoff)
+- Media emphasis: prefer videos; photos only if a 1s micro‑burst helps the story
+– Do not include filenames, clip_id, or metadata in this step.
 
 7) Reasoning (concise, for operator review)
 - Why these ideas are viable given our footage: cite key enrichment_input_raw themes and day-wise beats.
-- Why each mini‑chapter’s EDL picks make sense: “because X, Y, Z clips exist and form a coherent arc”.
+- Why each mini‑chapter’s shot plan makes sense: “because X, Y, Z supported themes exist and form a coherent arc”.
 
 Important:
 - Ensure we can actually find the candidates in Travel Files Directory by exact story_description/metadata.

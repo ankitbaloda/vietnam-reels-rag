@@ -1,6 +1,12 @@
 # env and local
 .env
 .env.local
+.venv/
+.vscode/
+
+# Python caches
+__pycache__/
+*.pyc
 
 # macOS
 .DS_Store
@@ -16,3 +22,10 @@ npm-debug.log*
 # Data you might not want to commit (optional)
 data/source/*
 !data/source/.gitkeep
+
+# App runtime artifacts
+out/
+database.sqlite
+
+# Backups or generated builds
+web_backup_*/
