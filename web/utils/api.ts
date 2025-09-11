@@ -15,7 +15,6 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
   let attempt = 0;
   while (true) {
     try {
-      console.log(`Making API call to: /api${endpoint}`);
       const response = await fetch(`/api${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
@@ -24,16 +23,13 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
       ...options,
     });
 
-      console.log(`API response status: ${response.status}`);
       if (!response.ok) {
         // Retry policy for 429 and 5xx
         const retryAfter = Number(response.headers.get('Retry-After') || '0');
         if ((response.status === 429 || (response.status >= 500 && response.status < 600)) && attempt < maxRetries) {
           const delay = retryAfter > 0 ? retryAfter * 1000 : baseDelay * Math.pow(2, attempt);
-          console.log('Error response data:', errorData);
           await new Promise(r => setTimeout(r, delay));
           attempt++;
-          console.log(`Retrying API call, attempt ${attempt}`);
           continue;
         }
       // Try to extract structured error info
@@ -61,7 +57,6 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
 
       return response.json();
     } catch (error) {
-      console.error(`API call attempt ${attempt} failed:`, error);
       // If it's a network error or server unavailable, provide fallback / retry
       const err = error as Error;
       if (err instanceof TypeError && err.message.includes('fetch') && attempt < maxRetries) {
