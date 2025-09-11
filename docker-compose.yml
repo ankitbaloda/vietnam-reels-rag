@@ -45,6 +45,7 @@ services:
       - QDRANT_API_KEY=${QDRANT_API_KEY}
       - EMBEDDINGS_MODEL=${EMBEDDINGS_MODEL}
     entrypoint: ["bash", "-lc", "pip install -r requirements.txt && python scripts/build_hierarchical_index.py --source-dir data/source --collection flowise_reels --embeddings-model ${EMBEDDINGS_MODEL:-text-embedding-3-large} --qdrant-url ${QDRANT_URL:-http://qdrant:6333} --max-tokens-per-chunk ${MAX_TOKENS_PER_CHUNK:-800} --overlap-tokens ${OVERLAP_TOKENS:-100}"]
+    entrypoint: ["bash", "-lc", "python3 -m pip install -r requirements.txt && python scripts/build_hierarchical_index.py --source-dir data/source --collection flowise_reels --embeddings-model ${EMBEDDINGS_MODEL:-text-embedding-3-large} --qdrant-url ${QDRANT_URL:-http://qdrant:6333} --max-tokens-per-chunk ${MAX_TOKENS_PER_CHUNK:-800} --overlap-tokens ${OVERLAP_TOKENS:-100}"]
 
   pipeline:
     image: python:3.12-slim
@@ -64,6 +65,7 @@ services:
       - EMBEDDINGS_MODEL=${EMBEDDINGS_MODEL}
       - TOPIC=${TOPIC}
     entrypoint: ["bash", "-lc", "pip install -r requirements.txt && python scripts/run_pipeline.py ideation --topic '${TOPIC:-Vietnam travel reels}' && python scripts/run_pipeline.py suno --script out/01_ideation_and_edl.md && python scripts/run_pipeline.py handoff --idea out/01_ideation_and_edl.md --suno out/03_suno_prompt.txt"]
+    entrypoint: ["bash", "-lc", "python3 -m pip install -r requirements.txt && python scripts/run_pipeline.py ideation --topic '${TOPIC:-Vietnam travel reels}' && python scripts/run_pipeline.py suno --script out/01_ideation_and_edl.md && python scripts/run_pipeline.py handoff --idea out/01_ideation_and_edl.md --suno out/03_suno_prompt.txt"]
 
   server:
     image: python:3.12-slim
@@ -80,6 +82,7 @@ services:
     ports:
       - "8000:8000"
     entrypoint: ["bash", "-lc", "pip install -r requirements.txt && uvicorn server.app:app --host 0.0.0.0 --port 8000"]
+    entrypoint: ["bash", "-lc", "python3 -m pip install -r requirements.txt && uvicorn server.app:app --host 0.0.0.0 --port 8000"]
   
   web:
     image: node:20-alpine
