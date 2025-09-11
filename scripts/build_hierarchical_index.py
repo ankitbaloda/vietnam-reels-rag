@@ -2,7 +2,10 @@ import argparse
 import os
 import sys
 import uuid
-from dataclasses import dataclass
+import csv
+import json
+from collections import defaultdict
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
@@ -40,10 +43,11 @@ class DocChunk:
     file_path: str
     chunk_index: int
     text: str
+    metadata: Dict[str, str] = field(default_factory=dict)
 
 
 def iter_source_files(root: Path) -> Iterable[Path]:
-    exts = {".md", ".mdx", ".txt"}
+    exts = {".md", ".mdx", ".txt", ".csv"}
     for p in root.rglob("*"):
         if p.is_file() and p.suffix.lower() in exts:
             yield p
@@ -60,21 +64,42 @@ def read_text(path: Path) -> str:
 def build_chunks(source_dir: Path, max_tokens: int, overlap_tokens: int) -> List[DocChunk]:
     chunks: List[DocChunk] = []
     for file in iter_source_files(source_dir):
-        content = read_text(file)
-        parts = hierarchical_chunks(
-            content,
-            max_tokens_per_chunk=max_tokens,
-            overlap_tokens=overlap_tokens,
-        )
-        for idx, txt in enumerate(parts):
-            chunks.append(
-                DocChunk(file_path=str(file.as_posix()), chunk_index=idx, text=txt)
+        if file.suffix.lower() == ".csv":
+            # One chunk per row for better grounding and precise referencing
+            try:
+                with file.open("r", encoding="utf-8", newline="") as f:
+                    reader = csv.DictReader(f)
+                    for r_idx, row in enumerate(reader):
+                        # Flatten row into a compact textual record
+                        fields = [f"{k}={str(v).strip()}" for k, v in row.items()]
+                        text = f"CSV_ROW | source={file.name} | " + " | ".join(fields)
+                        # Also carry row fields into payload with a row_ prefix for future filters (trip/persona/location, etc.)
+                        md = {f"row_{k}": str(v).strip() for k, v in row.items()}
+                        chunks.append(DocChunk(file_path=str(file.as_posix()), chunk_index=r_idx, text=text, metadata=md))
+            except Exception:
+                # Fallback to plain text if CSV parsing fails
+                content = read_text(file)
+                for idx, txt in enumerate(
+                    hierarchical_chunks(content, max_tokens_per_chunk=max_tokens, overlap_tokens=overlap_tokens)
+                ):
+                    chunks.append(DocChunk(file_path=str(file.as_posix()), chunk_index=idx, text=txt))
+        else:
+            content = read_text(file)
+            parts = hierarchical_chunks(
+                content,
+                max_tokens_per_chunk=max_tokens,
+                overlap_tokens=overlap_tokens,
             )
+            for idx, txt in enumerate(parts):
+                chunks.append(DocChunk(file_path=str(file.as_posix()), chunk_index=idx, text=txt))
     return chunks
 
 
 def embed_texts(client: OpenAI, model: str, texts: List[str]) -> List[List[float]]:
     # Batch for efficiency
+    # If routing via OpenRouter, ensure OpenAI models are namespaced
+    if os.getenv("OPENROUTER_API_KEY") and "/" not in model and model.startswith("text-embedding"):
+        model = f"openai/{model}"
     resp = client.embeddings.create(model=model, input=texts)
     return [d.embedding for d in resp.data]
 
@@ -104,14 +129,18 @@ def upsert_chunks(
     payloads: List[Dict] = []
     for ch in chunks:
         ids.append(str(uuid.uuid5(uuid.NAMESPACE_URL, f"{ch.file_path}:{ch.chunk_index}")))
-        payloads.append(
-            {
-                "file_path": ch.file_path,
-                "chunk_index": ch.chunk_index,
-                "text": ch.text,
-                "n_tokens": count_tokens(ch.text),
-            }
-        )
+        base = {
+            "file_path": ch.file_path,
+            "source_name": Path(ch.file_path).name,
+            "source_type": Path(ch.file_path).suffix.lower().lstrip('.'),
+            "chunk_index": ch.chunk_index,
+            "text": ch.text,
+            "n_tokens": count_tokens(ch.text),
+        }
+        # Merge CSV row metadata if present
+        if ch.metadata:
+            base.update(ch.metadata)
+        payloads.append(base)
     qc.upsert(
         collection_name=collection,
         points=models.Batch(ids=ids, vectors=vectors, payloads=payloads),
@@ -160,13 +189,28 @@ def main():
         print(f"Source directory not found: {source_dir}", file=sys.stderr)
         sys.exit(1)
 
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
-        print("OPENAI_API_KEY is required", file=sys.stderr)
-        sys.exit(1)
+    # Prepare OpenAI/OpenRouter client
+    def _sanitize(key: str) -> str:
+        key = key.strip()
+        return "".join(ch for ch in key if 32 <= ord(ch) < 127)
 
-    # Prepare
-    client = OpenAI(api_key=openai_api_key)
+    or_key = (os.getenv("OPENROUTER_API_KEY") or "").strip()
+    if or_key:
+        base_url = (os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").strip()
+        headers = {}
+        site = os.getenv("OPENROUTER_SITE_URL")
+        app = os.getenv("OPENROUTER_APP_NAME")
+        if site:
+            headers["HTTP-Referer"] = site
+        if app:
+            headers["X-Title"] = app
+        client = OpenAI(base_url=base_url, api_key=_sanitize(or_key), default_headers=headers or None)
+    else:
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            print("Set OPENROUTER_API_KEY or OPENAI_API_KEY in environment", file=sys.stderr)
+            sys.exit(1)
+        client = OpenAI(api_key=_sanitize(openai_api_key))
     qc = QdrantClient(url=args.qdrant_url, api_key=args.qdrant_api_key)
 
     dim = infer_dim(args.embeddings_model)
@@ -187,6 +231,20 @@ def main():
         vectors = embed_texts(client, args.embeddings_model, [c.text for c in batch])
         upsert_chunks(qc, args.collection, vectors, batch)
         print(f"Upserted {i + len(batch)}/{len(all_chunks)} chunks")
+
+    # Emit a simple coverage report
+    by_file: Dict[str, int] = defaultdict(int)
+    for ch in all_chunks:
+        by_file[ch.file_path] += 1
+    report = {
+        "collection": args.collection,
+        "total_chunks": len(all_chunks),
+        "by_file": dict(by_file),
+    }
+    out_dir = Path("out")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "index_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(f"Wrote coverage report to {out_dir / 'index_report.json'}")
 
 
 if __name__ == "__main__":
