@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Session, Message, ModelItem, StepId, FinalEntry, UsageStat, Citation, Role } from '../types';
+import { Session, Message, ModelItem, StepId, FinalEntry, UsageStat, Citation, Role } from '../web/types';
 import {
   loadSessions,
   saveSessions,
@@ -12,15 +12,15 @@ import {
   createNewSession,
   createFinalEntry,
   generateId
-} from '../utils/localStorage';
-import { fetchModels, fetchHistory, runPipelineStep } from '../utils/api';
-import SessionSidebar from '../components/SessionSidebar';
-import HeaderControls from '../components/HeaderControls';
-import StepTabs from '../components/StepTabs';
-import ChatView from '../components/ChatView';
-import MetaPanel from '../components/MetaPanel';
-import RightPanel from '../components/RightPanel';
-import Dashboard from '../components/Dashboard';
+} from '../web/utils/localStorage';
+import { fetchModels, fetchHistory, runPipelineStep } from '../web/utils/api';
+import SessionSidebar from '../web/components/SessionSidebar';
+import HeaderControls from '../web/components/HeaderControls';
+import StepTabs from '../web/components/StepTabs';
+import ChatView from '../web/components/ChatView';
+import MetaPanel from '../web/components/MetaPanel';
+import RightPanel from '../web/components/RightPanel';
+import Dashboard from '../web/components/Dashboard';
 
 export default function Home() {
   // State management
