@@ -92,6 +92,7 @@ services:
       - server
     environment:
       - NEXT_PUBLIC_API_BASE=http://localhost:8000
+      - NEXT_CACHE_DIR=/tmp/.next_cache
     volumes:
       - ./web:/app
     ports:
