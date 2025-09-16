@@ -34,3 +34,4 @@ database.sqlite
 
 # Backups or generated builds
 web_backup_*/
+server.log

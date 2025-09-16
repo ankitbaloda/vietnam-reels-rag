@@ -130,3 +130,52 @@ INFO:httpx:HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTT
 Using OpenRouter client with base URL: https://openrouter.ai/api/v1
 Using OpenRouter client with base URL: https://openrouter.ai/api/v1
 INFO:     127.0.0.1:55552 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60274 - "GET /history?session_id=1758044298656-4v9n16otc&limit=200 HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET https://openrouter.ai/api/v1/models "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://openrouter.ai/api/v1/models "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://openrouter.ai/api/v1/models "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://openrouter.ai/api/v1/models "HTTP/1.1 200 OK"
+INFO:server.app:Successfully fetched 328 models from OpenRouter
+INFO:     127.0.0.1:60296 - "GET /models?t=1758044299318 HTTP/1.1" 200 OK
+INFO:server.app:Successfully fetched 328 models from OpenRouter
+INFO:server.app:Successfully fetched 328 models from OpenRouter
+INFO:server.app:Successfully fetched 328 models from OpenRouter
+INFO:     127.0.0.1:60286 - "GET /models?t=1758044299296 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60274 - "GET /models?t=1758044299316 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60312 - "GET /models?t=1758044299322 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45464 - "POST /rag/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45468 - "GET /history?session_id=1758044298656-4v9n16otc&limit=200 HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://localhost:6333/collections "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://openrouter.ai/api/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://openrouter.ai/api/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://openrouter.ai/api/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+Using OpenRouter client with base URL: https://openrouter.ai/api/v1
+Using OpenRouter client with base URL: https://openrouter.ai/api/v1
+INFO:     127.0.0.1:45464 - "GET /history?session_id=1758044298656-4v9n16otc&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44634 - "POST /rag/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44648 - "GET /history?session_id=1758044298656-4v9n16otc&limit=200 HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://localhost:6333/collections "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://openrouter.ai/api/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://openrouter.ai/api/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://openrouter.ai/api/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:6333/collections/flowise_reels/points/scroll "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+Using OpenRouter client with base URL: https://openrouter.ai/api/v1
+Using OpenRouter client with base URL: https://openrouter.ai/api/v1
+INFO:     127.0.0.1:44634 - "GET /history?session_id=1758044298656-4v9n16otc&limit=200 HTTP/1.1" 200 OK
