@@ -85,19 +85,21 @@ services:
     entrypoint: ["bash", "-lc", "pip install -r requirements.txt && uvicorn server.app:app --host 0.0.0.0 --port 8000 --timeout-graceful-shutdown 150"]
   
   web:
-    image: node:20-alpine
+    build:
+      context: ./web
+      dockerfile: Dockerfile
     container_name: reelsrag-web
-    working_dir: /app
-    depends_on:
-      - server
-    environment:
-      - NEXT_PUBLIC_API_BASE=http://server:8000
-      - NEXT_CACHE_DIR=/tmp/.next_cache
-    volumes:
-      - ./web:/app
     ports:
       - "3001:3000"
-    entrypoint: ["sh", "-lc", "if [ -f package-lock.json ]; then npm ci; else npm install; fi && npm run dev"]
+    environment:
+      - NEXT_PUBLIC_RAG_ENDPOINT=http://server:8000
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    depends_on:
+      - server
+    volumes:
+      - ./web:/app
+      - ./prompts:/app/prompts
 
 volumes:
   qdrant_storage:

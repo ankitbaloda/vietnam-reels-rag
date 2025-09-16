@@ -149,51 +149,215 @@ def get_openai_client():
     raise HTTPException(status_code=500, detail="No valid API keys configured. Please check OPENROUTER_API_KEY or OPENAI_API_KEY in .env file")
 
 async def fetch_openrouter_models():
-    """Fetch models from OpenRouter API"""
-    load_dotenv()  # Ensure fresh environment variables
-    or_key = os.getenv("OPENROUTER_API_KEY", "").strip()
-    if not or_key:
+    """Fetch models from OpenRouter API with enhanced provider detection and prioritization"""
+    openrouter_api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if not openrouter_api_key:
         logger.warning("No OpenRouter API key found for model fetching")
         return []
     
     try:
-        base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        openrouter_base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        openrouter_site_url = os.getenv("OPENROUTER_SITE_URL", "")
+        openrouter_app_name = os.getenv("OPENROUTER_APP_NAME", "")
+        
         headers = {
-            "Authorization": f"Bearer {or_key}",
+            "Authorization": f"Bearer {openrouter_api_key}",
             "Content-Type": "application/json"
         }
-        if os.getenv("OPENROUTER_SITE_URL"):
-            headers["HTTP-Referer"] = os.getenv("OPENROUTER_SITE_URL")
-        if os.getenv("OPENROUTER_APP_NAME"):
-            headers["X-Title"] = os.getenv("OPENROUTER_APP_NAME")
+        if openrouter_site_url:
+            headers["HTTP-Referer"] = openrouter_site_url
+        if openrouter_app_name:
+            headers["X-Title"] = openrouter_app_name
         
-        logger.info(f"Fetching models from: {base_url}/models")
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{base_url}/models", headers=headers, timeout=60.0)
-            logger.info(f"Models API response status: {response.status_code}")
-            if response.status_code == 200:
-                data = response.json()
-                models = []
-                for model in data.get("data", []):
-                    models.append({
-                        "id": model["id"],
-                        "provider": model.get("provider", "Unknown"),
-                        "label": model.get("name", model["id"]),
-                        "free": model.get("pricing", {}).get("prompt", "0") == "0",
-                        "paid": model.get("pricing", {}).get("prompt", "0") != "0",
-                        "recommended": model["id"] in [
-                            "openai/gpt-5-mini", "openai/gpt-4o-mini", 
-                            "anthropic/claude-3-5-sonnet", "google/gemini-pro"
-                        ]
-                    })
-                logger.info(f"Successfully fetched {len(models)} models")
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(f"{openrouter_base_url}/models", headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            
+            models = []
+            if "data" in data:
+                # Define provider priority and recommended models
+                provider_priority = {
+                    "openai": 1,
+                    "anthropic": 2, 
+                    "google": 3,
+                    "meta": 4,
+                    "xai": 5,
+                    "mistral": 6,
+                    "cohere": 7,
+                    "aws": 8,
+                    "nvidia": 9,
+                    "huggingface": 10
+                }
+                
+                recommended_models = {
+                    # 🚀 Latest 2025 Models (Highest Priority)
+                    # ChatGPT-5 series
+                    "openai/gpt-5": True,
+                    "openai/gpt-5-mini": True,
+                    "openai/gpt-5-turbo": True,
+                    "openai/gpt-5-pro": True,
+                    "openai/chatgpt-5": True,
+                    "openai/o1-pro": True,
+                    "openai/o1-max": True,
+                    "openai/o1-preview-2025": True,
+                    
+                    # Claude 4 series  
+                    "anthropic/claude-4": True,
+                    "anthropic/claude-4-sonnet": True,
+                    "anthropic/claude-4-opus": True,
+                    "anthropic/claude-4-haiku": True,
+                    "anthropic/claude-3.5-sonnet-20250101": True,
+                    "anthropic/claude-3.5-opus": True,
+                    
+                    # Gemini 2.5/3.0 series
+                    "google/gemini-2.5-pro": True,
+                    "google/gemini-2.5-flash": True,
+                    "google/gemini-3.0-pro": True,
+                    "google/gemini-3.0-flash": True,
+                    "google/gemini-2.0-flash-thinking": True,
+                    
+                    # Llama 4 series
+                    "meta-llama/llama-4": True,
+                    "meta-llama/llama-3.3": True,
+                    "meta-llama/llama-3.2-405b": True,
+                    "meta-llama/llama-3.2-90b": True,
+                    
+                    # Other 2025 models
+                    "xai/grok-3": True,
+                    "xai/grok-2.5": True,
+                    "cohere/command-r-08-2025": True,
+                    "mistralai/mixtral-8x22b-instruct-v0.3": True,
+                    
+                    # 📈 High Priority 2024 Models
+                    # OpenAI
+                    "openai/gpt-4o": True,
+                    "openai/gpt-4o-mini": True,
+                    "openai/gpt-4-turbo": True,
+                    "openai/o1": True,
+                    "openai/o1-mini": True,
+                    "openai/o1-preview": True,
+                    # Anthropic
+                    "anthropic/claude-3.5-sonnet": True,
+                    "anthropic/claude-3.5-haiku": True,
+                    "anthropic/claude-3-opus": True,
+                    # Google
+                    "google/gemini-2.0-flash-exp": True,
+                    "google/gemini-exp-1206": True,
+                    "google/gemini-pro": True,
+                    "google/gemini-1.5-pro": True,
+                    # Meta
+                    "meta-llama/llama-3.1-405b-instruct": True,
+                    "meta-llama/llama-3.1-70b-instruct": True,
+                    "meta-llama/llama-3.1-8b-instruct": True,
+                    # xAI
+                    "xai/grok-2": True,
+                    "xai/grok-beta": True,
+                    # Cohere
+                    "cohere/command-r-plus": True,
+                    # Mistral
+                    "mistralai/mixtral-8x7b-instruct": True,
+                    "mistralai/mistral-large": True
+                }
+                
+                for model in data["data"]:
+                    model_id = model.get("id", "")
+                    
+                    # Enhanced provider detection
+                    provider = "Unknown"
+                    if "/" in model_id:
+                        provider_part = model_id.split("/")[0].lower()
+                        if provider_part in ["openai"]:
+                            provider = "OpenAI"
+                        elif provider_part in ["anthropic"]:
+                            provider = "Anthropic"
+                        elif provider_part in ["google"]:
+                            provider = "Google"
+                        elif provider_part in ["meta-llama", "meta"]:
+                            provider = "Meta"
+                        elif provider_part in ["xai"]:
+                            provider = "xAI"
+                        elif provider_part in ["mistralai", "mistral"]:
+                            provider = "Mistral"
+                        elif provider_part in ["cohere"]:
+                            provider = "Cohere"
+                        elif provider_part in ["aws", "amazon"]:
+                            provider = "AWS"
+                        elif provider_part in ["nvidia"]:
+                            provider = "NVIDIA"
+                        elif provider_part in ["huggingface", "hf"]:
+                            provider = "Hugging Face"
+                        elif provider_part in ["qwen"]:
+                            provider = "Alibaba"
+                        elif provider_part in ["deepseek"]:
+                            provider = "DeepSeek"
+                        elif provider_part in ["01-ai"]:
+                            provider = "01.AI"
+                        else:
+                            # Capitalize first letter of unknown providers
+                            provider = provider_part.title()
+                    
+                    # Check if model is free (some OpenRouter models are free)
+                    pricing = model.get("pricing", {})
+                    prompt_cost = float(pricing.get("prompt", "0"))
+                    completion_cost = float(pricing.get("completion", "0"))
+                    is_free = prompt_cost == 0 and completion_cost == 0
+                    
+                    # Check if model is recommended
+                    is_recommended = model_id in recommended_models
+                    
+                    # Check if it's a 2025 model based on model ID patterns
+                    latest_2025_patterns = [
+                        'gpt-5', 'chatgpt-5', 'o1-pro', 'o1-max', 'o1-preview-2025',
+                        'claude-4', 'claude-3.5-sonnet-2025', 'claude-3.5-opus',
+                        'gemini-2.5', 'gemini-3.0', 'gemini-2.0-flash-thinking',
+                        'llama-4', 'llama-3.3', 'llama-3.2-405b', 'llama-3.2-90b',
+                        'grok-3', 'grok-2.5', 'command-r-08-2025', 'mixtral-8x22b-instruct-v0.3'
+                    ]
+                    
+                    is_2025_model = any(pattern in model_id.lower() for pattern in latest_2025_patterns)
+                    
+                    # Create enhanced label with special markers
+                    base_label = model.get("name", model_id)
+                    if is_2025_model:
+                        enhanced_label = f"🚀 {base_label}"
+                    elif is_recommended:
+                        enhanced_label = f"⭐ {base_label}"
+                    else:
+                        enhanced_label = base_label
+                    
+                    model_item = {
+                        "id": model_id,
+                        "provider": provider,
+                        "label": enhanced_label,
+                        "free": is_free,
+                        "paid": not is_free,
+                        "recommended": is_recommended,
+                        "is_2025_model": is_2025_model,
+                        "context_length": model.get("context_length", 0),
+                        "pricing": {
+                            "prompt": prompt_cost,
+                            "completion": completion_cost
+                        }
+                    }
+                    models.append(model_item)
+                
+                # Sort models by priority: 2025 models first, then recommended, then by provider priority, then by name
+                def sort_key(model):
+                    provider_name = model["provider"].lower()
+                    provider_rank = provider_priority.get(provider_name, 999)
+                    is_2025_rank = 0 if model.get("is_2025_model", False) else 1
+                    recommended_rank = 0 if model["recommended"] else 1
+                    return (is_2025_rank, recommended_rank, provider_rank, model["label"].lower())
+                
+                models.sort(key=sort_key)
+                
+                logger.info(f"Successfully fetched {len(models)} models from OpenRouter")
                 return models
-            else:
-                logger.error(f"Models API returned {response.status_code}: {response.text}")
+                
     except Exception as e:
-        logger.error(f"Failed to fetch OpenRouter models: {e}")
-    
-    return []
+        logger.error(f"Failed to fetch models from OpenRouter: {e}")
+        return []
 
 @app.get("/health")
 async def health_check():
@@ -206,7 +370,7 @@ async def get_models():
     # Fetch from OpenRouter first, then add fallback models
     openrouter_models = await fetch_openrouter_models()
     
-    # Fallback models if OpenRouter fails
+    # Fallback models if OpenRouter fails - Updated 2025 models
     fallback_models = [
         {
             "id": "openai/gpt-5-mini",
@@ -218,7 +382,7 @@ async def get_models():
         },
         {
             "id": "openai/gpt-4o-mini",
-            "provider": "OpenAI",
+            "provider": "OpenAI", 
             "label": "GPT-4o Mini",
             "free": False,
             "paid": True,
@@ -231,6 +395,38 @@ async def get_models():
             "free": False,
             "paid": True,
             "recommended": True
+        },
+        {
+            "id": "anthropic/claude-3-5-haiku",
+            "provider": "Anthropic",
+            "label": "Claude 3.5 Haiku",
+            "free": False,
+            "paid": True,
+            "recommended": False
+        },
+        {
+            "id": "google/gemini-2.0-flash",
+            "provider": "Google",
+            "label": "Gemini 2.0 Flash",
+            "free": False,
+            "paid": True,
+            "recommended": True
+        },
+        {
+            "id": "xai/grok-2",
+            "provider": "xAI",
+            "label": "Grok-2",
+            "free": False,
+            "paid": True,
+            "recommended": False
+        },
+        {
+            "id": "meta-llama/llama-3.1-405b-instruct",
+            "provider": "Meta",
+            "label": "Llama 3.1 405B Instruct", 
+            "free": False,
+            "paid": True,
+            "recommended": False
         }
     ]
     

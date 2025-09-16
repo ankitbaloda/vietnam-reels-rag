@@ -7,6 +7,7 @@ import ABCompare from './ABCompare';
 import { sendChatMessage, sendRAGQuery } from '../utils/api';
 import { streamSSE } from '../utils/stream';
 import { generateId } from '../utils/localStorage';
+import { formatDateTime } from '../utils/dateUtils';
 
 interface ChatViewProps {
   messages: Message[];
@@ -104,6 +105,16 @@ export default function ChatView({
     setSearchResults(res.slice(-20));
   }, [showSearch, searchQuery, messages]);
 
+  // Debug: Track message changes to ensure persistence
+  useEffect(() => {
+    console.log(`ChatView messages updated - Count: ${messages.length}`, {
+      userMessages: messages.filter(m => m.role === 'user').length,
+      assistantMessages: messages.filter(m => m.role === 'assistant').length,
+      sessionId,
+      currentStep
+    });
+  }, [messages, sessionId, currentStep]);
+
   const startStream = (url: string, body: any, onDone: (finalText: string) => void) => {
     setStreamBuffer('');
     setStreamCitations(undefined);
@@ -134,9 +145,14 @@ export default function ChatView({
     setInputValue('');
     setError(null);
 
+    // Create user message and send it immediately to ensure persistence
     const userMsg: Message = { id: generateId(), role: 'user', content: userMessage, ts: Date.now(), step: currentStep };
+    
+    // Send user message immediately to update state
     onSendMessage(userMsg.content, selectedModel, 'user');
     setLastUserMessage(userMsg.content);
+
+    console.log('User message sent:', { content: userMessage.slice(0, 50) + '...', step: currentStep });
 
     try {
       setActivity('Thinking…');
@@ -219,7 +235,7 @@ export default function ChatView({
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-6 space-y-6 max-w-4xl mx-auto w-full"
@@ -390,7 +406,7 @@ export default function ChatView({
         </div>
       )}
 
-      <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+      <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 flex-shrink-0">
         <div className="max-w-4xl mx-auto">
         {showSearch && (
             <div className="fixed inset-0 z-40 flex items-start justify-center p-4 bg-black/20" onClick={() => setShowSearch(false)}>
@@ -410,7 +426,7 @@ export default function ChatView({
                 ) : (
                   searchResults.map((m)=> (
                     <div key={m.id} className="p-3 border-t first:border-t-0">
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{m.role} • {new Date(m.ts).toLocaleString()}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{m.role} • {formatDateTime(m.ts)}</div>
                         <div className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{m.content}</div>
                     </div>
                   ))

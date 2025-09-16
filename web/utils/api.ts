@@ -76,16 +76,16 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
 // Models API
 export async function fetchModels(): Promise<{ models: string[]; items: ModelItem[] }> {
   try {
-    const data = await apiCall('/models');
+    const data = await apiCall<{ models: string[]; items: ModelItem[] }>('/models');
     return data;
   } catch (error) {
-    // Provide fallback models when backend is unavailable
+    // Provide fallback models when backend is unavailable - Updated 2025 models
     console.warn('Backend unavailable, using fallback models:', error);
     return {
-      models: ['openrouter/gpt-5-mini', 'openrouter/gpt-4o-mini', 'openrouter/claude-3-5-sonnet'],
+      models: ['openai/gpt-5-mini', 'openai/gpt-4o-mini', 'anthropic/claude-3-5-sonnet', 'anthropic/claude-3-5-haiku', 'google/gemini-2.0-flash', 'xai/grok-2', 'meta-llama/llama-3.1-405b-instruct'],
       items: [
         {
-          id: 'openrouter/gpt-5-mini',
+          id: 'openai/gpt-5-mini',
           provider: 'OpenAI',
           label: 'GPT-5 Mini',
           free: true,
@@ -93,7 +93,7 @@ export async function fetchModels(): Promise<{ models: string[]; items: ModelIte
           recommended: true
         },
         {
-          id: 'openrouter/gpt-4o-mini',
+          id: 'openai/gpt-4o-mini',
           provider: 'OpenAI',
           label: 'GPT-4o Mini',
           free: false,
@@ -101,12 +101,44 @@ export async function fetchModels(): Promise<{ models: string[]; items: ModelIte
           recommended: true
         },
         {
-          id: 'openrouter/claude-3-5-sonnet',
+          id: 'anthropic/claude-3-5-sonnet',
           provider: 'Anthropic',
           label: 'Claude 3.5 Sonnet',
           free: false,
           paid: true,
           recommended: true
+        },
+        {
+          id: 'anthropic/claude-3-5-haiku',
+          provider: 'Anthropic',
+          label: 'Claude 3.5 Haiku',
+          free: false,
+          paid: true,
+          recommended: false
+        },
+        {
+          id: 'google/gemini-2.0-flash',
+          provider: 'Google',
+          label: 'Gemini 2.0 Flash',
+          free: false,
+          paid: true,
+          recommended: true
+        },
+        {
+          id: 'xai/grok-2',
+          provider: 'xAI',
+          label: 'Grok-2',
+          free: false,
+          paid: true,
+          recommended: false
+        },
+        {
+          id: 'meta-llama/llama-3.1-405b-instruct',
+          provider: 'Meta',
+          label: 'Llama 3.1 405B Instruct',
+          free: false,
+          paid: true,
+          recommended: false
         }
       ]
     };

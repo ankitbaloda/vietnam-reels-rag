@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Session, StepId } from '../types';
+import { formatDate } from '../utils/dateUtils';
 import { createNewSession } from '../utils/localStorage';
 
 interface SessionSidebarProps {
@@ -112,7 +113,7 @@ export default function SessionSidebar({
               )}
               
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                Created {new Date(session.createdAt).toLocaleDateString()}
+                Created {formatDate(session.createdAt)}
               </div>
               
               <div className="text-xs text-gray-400 dark:text-gray-500 mb-3">

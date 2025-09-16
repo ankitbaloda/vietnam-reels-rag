@@ -11,7 +11,9 @@ import {
   saveUsage,
   createNewSession,
   createFinalEntry,
-  generateId
+  generateId,
+  generateSessionName,
+  autoRenameSession
 } from '../utils/localStorage';
 import { fetchModels, fetchHistory, runPipelineStep } from '../utils/api';
 import SessionSidebar from '../components/SessionSidebar';
@@ -30,7 +32,7 @@ export default function Home() {
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [ragEnabled, setRagEnabled] = useState<boolean>(true);
   const [topK, setTopK] = useState<number>(25);
-  const [temperature, setTemperature] = useState<number>(0.7);
+  const [temperature, setTemperature] = useState<number>(0.4);
   const [persona, setPersona] = useState<string>('Both');
   const [trip, setTrip] = useState<string>('vietnam');
   const [finals, setFinals] = useState<Record<string, Record<StepId, FinalEntry[]>>>({});
@@ -40,7 +42,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [showDashboard, setShowDashboard] = useState<boolean>(false);
-  const [rightPanelTab, setRightPanelTab] = useState<'output' | 'raw' | 'logs' | 'settings'>('output');
+  const [rightPanelTab, setRightPanelTab] = useState<'actions' | 'usage'>('actions');
 
   // Initialize data on mount
   useEffect(() => {
@@ -207,31 +209,36 @@ export default function Home() {
     
     const currentStepMessages = currentSession.messagesByStep[currentSession.currentStep] || [];
     let updatedMessages = [...currentStepMessages];
-    // If the user is sending a message that exactly matches the last user message, treat it as an edit/regenerate
-    if (role === 'user' && currentStepMessages.length > 0) {
-      const last = currentStepMessages[currentStepMessages.length - 1];
-      if (last.role === 'user' && last.content === content) {
-        // bump editCount
-        const bumped = { ...last, editCount: (last.editCount || 0) + 1 };
-        updatedMessages = [...currentStepMessages.slice(0, -1), bumped];
+    
+    // Handle user messages carefully to prevent disappearance
+    if (role === 'user') {
+      // Check if this is a duplicate/edit of the last user message
+      if (currentStepMessages.length > 0) {
+        const last = currentStepMessages[currentStepMessages.length - 1];
+        if (last.role === 'user' && last.content === content) {
+          // bump editCount for edits/regenerations
+          const bumped = { ...last, editCount: (last.editCount || 0) + 1 };
+          updatedMessages = [...currentStepMessages.slice(0, -1), bumped];
+        } else {
+          // New user message - always add it
+          updatedMessages.push(message);
+        }
       } else {
+        // First message in step - always add it
         updatedMessages.push(message);
       }
     } else {
+      // Assistant message - always add it (no filtering/replacement)
       updatedMessages.push(message);
     }
+    
     // Auto-name session from first user message across all steps, if still default
     const totalMsgsBefore = Object.values(currentSession.messagesByStep || {}).reduce((acc, arr) => acc + (arr?.length || 0), 0);
     const shouldAutoName = role === 'user' && totalMsgsBefore === 0 && (!currentSession.name || currentSession.name === 'New Chat');
-    const autoName = shouldAutoName
-      ? (() => {
-          // Generate 2-4 word summary from first user message
-          const words = content.trim().split(/\s+/).slice(0, 4);
-          const summary = words.join(' ');
-          return summary.length > 50 ? summary.slice(0, 47) + '...' : summary;
-        })()
-      : currentSession.name;
-    const updatedSession = {
+    const autoName = shouldAutoName ? generateSessionName(content) : currentSession.name;
+    
+    // Create intermediate session for auto-rename check
+    const intermediateSession = {
       ...currentSession,
       name: autoName,
       messagesByStep: {
@@ -240,11 +247,31 @@ export default function Home() {
       }
     };
     
+    // Auto-rename session based on conversation after 2+ exchanges
+    const totalMsgsAfter = Object.values(intermediateSession.messagesByStep || {}).reduce((acc, arr) => acc + (arr?.length || 0), 0);
+    const shouldAutoRename = totalMsgsAfter >= 4 && !intermediateSession.autoRenamed && role === 'assistant';
+    const finalName = shouldAutoRename ? autoRenameSession(intermediateSession) : intermediateSession.name;
+    
+    const updatedSession = {
+      ...intermediateSession,
+      name: finalName,
+      autoRenamed: shouldAutoRename || intermediateSession.autoRenamed
+    };
+    
+    // Update state immediately to prevent race conditions
     setCurrentSession(updatedSession);
     
-  const updatedSessions = sessions.map(s => s.id === currentSession.id ? updatedSession : s);
+    const updatedSessions = sessions.map(s => s.id === currentSession.id ? updatedSession : s);
     setSessions(updatedSessions);
     saveSessions(updatedSessions);
+    
+    // Debug logging to track message persistence
+    console.log(`Message added - Role: ${role}, Current messages count: ${updatedMessages.length}`, {
+      content: content.slice(0, 50) + '...',
+      sessionId: currentSession.id,
+      step: currentSession.currentStep,
+      totalMessages: updatedMessages.length
+    });
   }, [currentSession, sessions]);
 
   // Finals management
@@ -296,10 +323,9 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 flex">
-      {/* Header Controls */}
-      {/* Sessions Sidebar */}
-      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 overflow-hidden`}>
+    <div className="h-screen bg-white dark:bg-gray-900 flex overflow-hidden">
+      {/* Sessions Sidebar - Fixed */}
+      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 overflow-hidden flex-shrink-0`}>
         <SessionSidebar
           sessions={sessions}
           currentSession={currentSession}
@@ -314,72 +340,78 @@ export default function Home() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header with model controls */}
-        <HeaderControls
-          selectedModel={selectedModel}
-          onModelChange={setSelectedModel}
-          ragEnabled={ragEnabled}
-          onRAGToggle={setRagEnabled}
-          topK={topK}
-          onTopKChange={setTopK}
-          temperature={temperature}
-          onTemperatureChange={setTemperature}
-          persona={persona}
-          onPersonaChange={setPersona}
-          trip={trip}
-          onTripChange={setTrip}
-          sessionTitle={currentSession?.name}
-          onSessionTitleChange={(title) => handleSessionRename(currentSession?.id || '', title)}
-          sidebarCollapsed={sidebarCollapsed}
-          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
-          onShowDashboard={() => setShowDashboard(true)}
-          usage={currentSessionUsage}
-          modelId={selectedModel}
-        />
+      <div className="flex-1 flex flex-col min-w-0 h-full">
+        {/* Header with model controls - Fixed */}
+        <div className="flex-shrink-0">
+          <HeaderControls
+            selectedModel={selectedModel}
+            onModelChange={setSelectedModel}
+            ragEnabled={ragEnabled}
+            onRAGToggle={setRagEnabled}
+            topK={topK}
+            onTopKChange={setTopK}
+            temperature={temperature}
+            onTemperatureChange={setTemperature}
+            persona={persona}
+            onPersonaChange={setPersona}
+            trip={trip}
+            onTripChange={setTrip}
+            sessionTitle={currentSession?.name}
+            onSessionTitleChange={(title) => handleSessionRename(currentSession?.id || '', title)}
+            sidebarCollapsed={sidebarCollapsed}
+            onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onShowDashboard={() => setShowDashboard(true)}
+            usage={currentSessionUsage}
+            modelId={selectedModel}
+          />
+        </div>
 
-        {/* Step Tabs */}
-        <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+        {/* Step Tabs - Fixed */}
+        <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
           <StepTabs
             currentStep={currentSession.currentStep}
             onStepChange={handleStepChange}
           />
         </div>
 
-        {/* Chat View */}
-        <div className="flex-1 flex">
-          <ChatView
-            messages={currentMessages}
-            onSendMessage={handleSendMessage}
-            onMarkFinal={handleMarkFinal}
-            selectedModel={selectedModel}
-            ragEnabled={ragEnabled}
-            topK={topK}
-            temperature={temperature}
-            persona={persona}
-            trip={trip}
-            sessionId={currentSession.id}
-            currentStep={currentSession.currentStep}
-            models={models}
-            isLoading={isLoading}
-            onUsageUpdate={handleUsageUpdate}
-          />
+        {/* Chat View and Right Panel - Scrollable */}
+        <div className="flex-1 flex overflow-hidden min-h-0">
+          <div className="flex-1 overflow-hidden">
+            <ChatView
+              messages={currentMessages}
+              onSendMessage={handleSendMessage}
+              onMarkFinal={handleMarkFinal}
+              selectedModel={selectedModel}
+              ragEnabled={ragEnabled}
+              topK={topK}
+              temperature={temperature}
+              persona={persona}
+              trip={trip}
+              sessionId={currentSession.id}
+              currentStep={currentSession.currentStep}
+              models={models}
+              isLoading={isLoading}
+              onUsageUpdate={handleUsageUpdate}
+            />
+          </div>
 
-          {/* Right Panel */}
-          <RightPanel
-            tab={rightPanelTab}
-            onTabChange={setRightPanelTab}
-            citations={currentCitations}
-            finals={currentSessionFinals}
-            currentStep={currentSession.currentStep}
-            usage={currentSessionUsage}
-            modelId={selectedModel}
-            messages={currentMessages}
-            persona={persona}
-            trip={trip}
-            topK={topK}
-            temperature={temperature}
-          />
+          {/* Right Panel - Fixed */}
+          <div className="flex-shrink-0">
+            <RightPanel
+              tab={rightPanelTab}
+              onTabChange={setRightPanelTab}
+              citations={currentCitations}
+              finals={currentSessionFinals}
+              currentStep={currentSession.currentStep}
+              usage={currentSessionUsage}
+              modelId={selectedModel}
+              messages={currentMessages}
+              persona={persona}
+              trip={trip}
+              topK={topK}
+              temperature={temperature}
+            />
+          </div>
         </div>
       </div>
 

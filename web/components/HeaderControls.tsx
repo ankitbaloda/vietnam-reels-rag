@@ -245,7 +245,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
 
         {/* Advanced toggle */}
         <button
-          className="text-sm text-gray-600 border border-gray-300 rounded px-2 py-1 hover:bg-gray-50"
+          className="text-sm text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 transition-colors"
           onClick={() => setShowAdvanced(!showAdvanced)}
         >
           {showAdvanced ? "Hide Advanced" : "Advanced"}

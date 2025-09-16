@@ -28,6 +28,7 @@ export interface Session {
   createdAt: number;
   currentStep: StepId;
   messagesByStep: Record<StepId, Message[]>;
+  autoRenamed?: boolean; // Track if session was already auto-renamed
 }
 
 export interface ModelItem {

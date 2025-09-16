@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('History API error:', error);
     
+    const searchParams = request.nextUrl.searchParams;
+    
     // Return empty history as fallback
     return NextResponse.json({
       session_id: searchParams.get('session_id') || '',
