@@ -20,6 +20,8 @@ interface RightPanelProps {
   trip: string;
   topK: number;
   temperature: number;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export default function RightPanel({
@@ -34,7 +36,9 @@ export default function RightPanel({
   persona,
   trip,
   topK,
-  temperature
+  temperature,
+  collapsed = false,
+  onToggleCollapse
 }: RightPanelProps) {
   const coverageSummary = getCoverageSummary(citations);
   const stepFinals = finals[currentStep] || [];
@@ -57,7 +61,26 @@ export default function RightPanel({
   ];
 
   return (
-    <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col h-full">
+    <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col h-full relative">
+      {/* Collapse Button */}
+      {onToggleCollapse && (
+        <button
+          onClick={onToggleCollapse}
+          className="absolute top-2 left-2 z-10 p-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          title={collapsed ? "Expand panel" : "Collapse panel"}
+        >
+          {collapsed ? (
+            <svg className="w-3 h-3 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          ) : (
+            <svg className="w-3 h-3 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          )}
+        </button>
+      )}
+      
       {/* Tab Headers */}
       <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <div className="flex">
@@ -166,28 +189,35 @@ export default function RightPanel({
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Token Usage & Cost</h3>
             
             {/* Current Request Usage */}
-            {usage && (usage.promptTokens || usage.completionTokens) && (
+            {usage && (usage.promptTokens || usage.completionTokens) ? (
               <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3">
-                <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Current Request</h4>
+                <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Last Request</h4>
                 <div className="space-y-1 text-xs">
-                  {usage.promptTokens && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Input:</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{usage.promptTokens.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {usage.completionTokens && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Output:</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{usage.completionTokens.toLocaleString()}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Input Tokens:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{(usage.promptTokens || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Output Tokens:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{(usage.completionTokens || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Total Tokens:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{((usage.promptTokens || 0) + (usage.completionTokens || 0)).toLocaleString()}</span>
+                  </div>
                   {cost && (
                     <div className="flex justify-between border-t border-gray-200 dark:border-gray-600 pt-1 mt-2">
-                      <span className="text-gray-900 dark:text-gray-100 font-medium">Cost:</span>
+                      <span className="text-gray-900 dark:text-gray-100 font-medium">Request Cost:</span>
                       <span className="font-semibold text-gray-900 dark:text-gray-100">${cost.totalUSD.toFixed(4)}</span>
                     </div>
                   )}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3">
+                <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Last Request</h4>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  No token usage data available. Make a request to see usage statistics.
                 </div>
               </div>
             )}

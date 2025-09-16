@@ -40,6 +40,7 @@ export default function ChatView({
   currentStep,
   models,
   isLoading,
+  onUsageUpdate,
 }: ChatViewProps) {
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -129,6 +130,12 @@ export default function ChatView({
         if (evt.type === 'context' && Array.isArray(evt.citations)) setStreamCitations(evt.citations as any);
         else if (evt.type === 'message') { acc += evt.delta; setStreamBuffer(acc); }
         else if (evt.type === 'error') setError(evt.error);
+        else if (evt.type === 'usage' && onUsageUpdate) {
+          onUsageUpdate({
+            promptTokens: evt.prompt_tokens,
+            completionTokens: evt.completion_tokens,
+          });
+        }
         else if (evt.type === 'done') { onDone(acc || 'No response'); setActivity(''); setIsStreaming(false); }
       },
       signal,
@@ -216,6 +223,15 @@ export default function ChatView({
                 session_id: sessionId,
                 step: currentStep,
               });
+          
+          // Update usage tracking for A/B tests
+          if (resp.usage && onUsageUpdate) {
+            onUsageUpdate({
+              promptTokens: resp.usage.prompt_tokens,
+              completionTokens: resp.usage.completion_tokens,
+            });
+          }
+          
           return { content: resp.choices[0]?.message?.content || 'No response', citations: (resp as RAGResponse).citations };
         } catch (e) {
           const msg = e instanceof Error ? e.message : 'Request failed';
@@ -238,10 +254,24 @@ export default function ChatView({
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-6 space-y-6 max-w-4xl mx-auto w-full"
+        className="flex-1 overflow-y-auto p-4 space-y-4 max-w-5xl mx-auto w-full relative"
         aria-live="polite"
         onScroll={() => { if (isNearBottom()) setShowJumpToLatest(false); else setShowJumpToLatest(true); }}
       >
+        {/* Jump to Latest Button - Inside chat area */}
+        {showJumpToLatest && (
+          <div className="fixed bottom-24 right-6 z-10">
+            <button 
+              onClick={() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); setShowJumpToLatest(false); }} 
+              className="w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
+              title="Jump to latest message"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </button>
+          </div>
+        )}
         {messages.map((message) => (
           <div key={message.id} className="group">
             <div className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -309,14 +339,12 @@ export default function ChatView({
                     >
                       Mark Final
                     </button>
-                    {message.id === [...messages].reverse().find(m => m.role === 'assistant')?.id && (
-                      <button 
-                        onClick={() => handleRegenerate()} 
-                        className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        Regenerate
-                      </button>
-                    )}
+                    <button 
+                      onClick={() => handleRegenerate()} 
+                      className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Regenerate
+                    </button>
                   </div>
                 )}
                 
@@ -400,14 +428,9 @@ export default function ChatView({
           </div>
         </div>
       )}
-      {activity && !error && (
-        <div className="mx-6 mb-4 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-200 px-4 py-3 rounded-lg text-sm">
-          {activity}
-        </div>
-      )}
 
-      <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 flex-shrink-0">
-        <div className="max-w-4xl mx-auto">
+      <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 flex-shrink-0">
+        <div className="max-w-5xl mx-auto">
         {showSearch && (
             <div className="fixed inset-0 z-40 flex items-start justify-center p-4 bg-black/20" onClick={() => setShowSearch(false)}>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-200 dark:border-gray-700" onClick={(e)=>e.stopPropagation()}>
@@ -433,16 +456,6 @@ export default function ChatView({
                 )}
               </div>
             </div>
-          </div>
-        )}
-        {showJumpToLatest && (
-          <div className="mb-2 flex justify-center">
-              <button 
-                onClick={() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); setShowJumpToLatest(false); }} 
-                className="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2"
-              >
-                Jump to latest
-              </button>
           </div>
         )}
           <div className="flex gap-3 mb-4">

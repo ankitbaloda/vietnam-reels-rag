@@ -41,6 +41,7 @@ export default function Home() {
   const [isPipelineRunning, setIsPipelineRunning] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState<boolean>(false);
   const [showDashboard, setShowDashboard] = useState<boolean>(false);
   const [rightPanelTab, setRightPanelTab] = useState<'actions' | 'usage'>('actions');
 
@@ -360,6 +361,8 @@ export default function Home() {
             onSessionTitleChange={(title) => handleSessionRename(currentSession?.id || '', title)}
             sidebarCollapsed={sidebarCollapsed}
             onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+            rightPanelCollapsed={rightPanelCollapsed}
+            onToggleRightPanel={() => setRightPanelCollapsed(!rightPanelCollapsed)}
             onShowDashboard={() => setShowDashboard(true)}
             usage={currentSessionUsage}
             modelId={selectedModel}
@@ -396,7 +399,7 @@ export default function Home() {
           </div>
 
           {/* Right Panel - Fixed */}
-          <div className="flex-shrink-0">
+          <div className={`${rightPanelCollapsed ? 'w-0' : 'w-80'} transition-all duration-300 overflow-hidden flex-shrink-0`}>
             <RightPanel
               tab={rightPanelTab}
               onTabChange={setRightPanelTab}
@@ -410,6 +413,8 @@ export default function Home() {
               trip={trip}
               topK={topK}
               temperature={temperature}
+              collapsed={rightPanelCollapsed}
+              onToggleCollapse={() => setRightPanelCollapsed(!rightPanelCollapsed)}
             />
           </div>
         </div>

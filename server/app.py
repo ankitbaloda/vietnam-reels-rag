@@ -511,6 +511,15 @@ async def chat_stream(request: ChatRequest):
                 
                 # Send content as SSE
                 yield f"event: message\ndata: {json.dumps({'delta': content})}\n\n"
+                
+                # Send usage data
+                if response.usage:
+                    usage_data = {
+                        'prompt_tokens': response.usage.prompt_tokens,
+                        'completion_tokens': response.usage.completion_tokens
+                    }
+                    yield f"event: usage\ndata: {json.dumps(usage_data)}\n\n"
+                
                 yield f"event: done\ndata: {json.dumps({'finish_reason': 'stop'})}\n\n"
                 
             except Exception as e:
@@ -585,6 +594,15 @@ async def rag_chat_stream(request: RAGRequest):
                     
                     content = response.choices[0].message.content or ""
                     yield f"event: message\ndata: {json.dumps({'delta': content})}\n\n"
+                    
+                    # Send usage data for fallback
+                    if response.usage:
+                        usage_data = {
+                            'prompt_tokens': response.usage.prompt_tokens,
+                            'completion_tokens': response.usage.completion_tokens
+                        }
+                        yield f"event: usage\ndata: {json.dumps(usage_data)}\n\n"
+                    
                     yield f"event: done\ndata: {json.dumps({'finish_reason': 'stop'})}\n\n"
                     
             except Exception as e:
