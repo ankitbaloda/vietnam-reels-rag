@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FinalEntry, Citation, StepId, Message } from '../types';
 import { estimateCostUSD, getModelPricing } from '../utils/pricing';
+import { estimateConversationTokens } from '../utils/tokenizer';
 import { getCoverageSummary, groupCitationsByCategory } from '../utils/coverage';
 import { formatDateTime } from '../utils/dateUtils';
 
@@ -45,15 +46,21 @@ export default function RightPanel({
   const cost = usage ? estimateCostUSD(usage, modelId) : undefined;
   const pricing = getModelPricing(modelId);
 
-  // Calculate cumulative session token statistics
-  const sessionTokens = messages.reduce((acc, message) => {
-    if (message.role === 'user') {
-      acc.totalInput += Math.ceil(message.content.length / 4);
-    } else if (message.role === 'assistant') {
-      acc.totalOutput += Math.ceil(message.content.length / 4);
-    }
-    return acc;
-  }, { totalInput: 0, totalOutput: 0 });
+  // Use actual API usage data when available, fallback to estimation
+  const sessionTokens = usage ? {
+    totalInput: usage.promptTokens || 0,
+    totalOutput: usage.completionTokens || 0
+  } : {
+    // Fallback to estimation if no API usage data available
+    totalInput: estimateConversationTokens(
+      messages.map(m => ({ role: m.role, content: m.content })), 
+      modelId
+    ).inputTokens,
+    totalOutput: estimateConversationTokens(
+      messages.map(m => ({ role: m.role, content: m.content })), 
+      modelId
+    ).outputTokens
+  };
 
   const tabs = [
     { id: 'actions' as const, label: 'Actions', icon: '⚡' },
@@ -237,7 +244,7 @@ export default function RightPanel({
                 <div className="flex justify-between border-t border-blue-200 dark:border-blue-700 pt-1 mt-2">
                   <span className="text-blue-900 dark:text-blue-100 font-medium">Est. Session Cost:</span>
                   <span className="font-semibold text-blue-900 dark:text-blue-100">
-                    ${((sessionTokens.totalInput / 1000) * pricing.inputPer1K + (sessionTokens.totalOutput / 1000) * pricing.outputPer1K).toFixed(4)}
+                    ${((sessionTokens.totalInput / 10000) * pricing.inputPer10K + (sessionTokens.totalOutput / 10000) * pricing.outputPer10K).toFixed(4)}
                   </span>
                 </div>
               </div>
@@ -252,12 +259,12 @@ export default function RightPanel({
                   <span className="font-medium text-gray-900 dark:text-gray-100">{modelId || 'Unknown'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Input per 1K:</span>
-                  <span className="font-medium">${pricing.inputPer1K.toFixed(4)}</span>
+                  <span>Input per 10K:</span>
+                  <span className="font-medium">${pricing.inputPer10K.toFixed(4)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Output per 1K:</span>
-                  <span className="font-medium">${pricing.outputPer1K.toFixed(4)}</span>
+                  <span>Output per 10K:</span>
+                  <span className="font-medium">${pricing.outputPer10K.toFixed(4)}</span>
                 </div>
               </div>
             </div>

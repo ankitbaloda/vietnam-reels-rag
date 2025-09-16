@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
     const queryString = searchParams.toString();
     
     // Try to forward to backend
-    const response = await fetch(`http://server:8000/history?${queryString}`, {
+    const response = await fetch(`http://localhost:8000/history?${queryString}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

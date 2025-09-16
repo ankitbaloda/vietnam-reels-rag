@@ -4,8 +4,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Try to forward to backend
-    const response = await fetch('http://server:8000/rag/chat/stream', {
+    // Try to forward to backend - use localhost for development
+    const response = await fetch('http://localhost:8000/rag/chat/stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

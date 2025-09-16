@@ -30,7 +30,7 @@ export default function Home() {
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [models, setModels] = useState<ModelItem[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
-  const [ragEnabled, setRagEnabled] = useState<boolean>(true);
+  const [ragEnabled, setRagEnabled] = useState<boolean>(false);
   const [topK, setTopK] = useState<number>(25);
   const [temperature, setTemperature] = useState<number>(0.4);
   const [persona, setPersona] = useState<string>('Both');
@@ -213,21 +213,9 @@ export default function Home() {
     
     // Handle user messages carefully to prevent disappearance
     if (role === 'user') {
-      // Check if this is a duplicate/edit of the last user message
-      if (currentStepMessages.length > 0) {
-        const last = currentStepMessages[currentStepMessages.length - 1];
-        if (last.role === 'user' && last.content === content) {
-          // bump editCount for edits/regenerations
-          const bumped = { ...last, editCount: (last.editCount || 0) + 1 };
-          updatedMessages = [...currentStepMessages.slice(0, -1), bumped];
-        } else {
-          // New user message - always add it
-          updatedMessages.push(message);
-        }
-      } else {
-        // First message in step - always add it
-        updatedMessages.push(message);
-      }
+      // Always add user messages - remove duplicate detection
+      // (User should be able to send the same message multiple times)
+      updatedMessages.push(message);
     } else {
       // Assistant message - always add it (no filtering/replacement)
       updatedMessages.push(message);

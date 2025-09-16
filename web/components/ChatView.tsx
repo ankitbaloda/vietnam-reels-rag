@@ -167,7 +167,11 @@ export default function ChatView({
       const url = ragEnabled ? '/api/rag/chat/stream' : '/api/chat/stream';
       const body = ragEnabled
         ? { query: userMessage, model: selectedModel, top_k: topK, temperature, session_id: sessionId, step: currentStep }
-        : { model: selectedModel, messages: [ { role: 'system', content: systemForStep(currentStep) }, ...[...messages, userMsg].map(m => ({ role: m.role, content: m.content })) ], temperature, session_id: sessionId, step: currentStep };
+        : { model: selectedModel, messages: [ 
+            { role: 'system', content: systemForStep(currentStep) }, 
+            ...messages.map(m => ({ role: m.role, content: m.content })),
+            { role: 'user', content: userMessage }
+          ], temperature, session_id: sessionId, step: currentStep };
       startStream(url, body, (finalText) => {
         onSendMessage(finalText, selectedModel, 'assistant', streamCitations);
         setVariants(v => [...v, { id: generateId(), content: finalText, model: selectedModel }]);
@@ -293,16 +297,12 @@ export default function ChatView({
                 }`}>
               {message.role === 'user' ? (
                   <div className="text-white">
-                    <div className="mb-2">{message.content}</div>
-                    <div className="flex items-center gap-2 text-xs opacity-75">
-                    {typeof message.editCount === 'number' && (<span className="text-gray-200">Edited ×{message.editCount}</span>)}
-                      <button 
-                        onClick={() => { setInputValue(message.content); textareaRef.current?.focus(); }} 
-                        className="underline hover:no-underline"
-                      >
-                        Edit
-                      </button>
-                    </div>
+                    <div>{message.content}</div>
+                    {typeof message.editCount === 'number' && (
+                      <div className="mt-2 text-xs opacity-75">
+                        <span className="text-gray-200">Edited ×{message.editCount}</span>
+                      </div>
+                    )}
                   </div>
               ) : (
                 <div>
@@ -329,21 +329,45 @@ export default function ChatView({
                   <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={() => navigator.clipboard.writeText(message.content)} 
-                      className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1"
+                      title="Copy to clipboard"
                     >
-                      Copy
+                      📋 Copy
                     </button>
                     <button 
                       onClick={() => onMarkFinal(message.content, message.model)} 
-                      className="text-xs text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="text-xs text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1"
+                      title="Mark as final version"
                     >
-                      Mark Final
+                      ⭐ Mark Final
                     </button>
                     <button 
                       onClick={() => handleRegenerate()} 
-                      className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1"
+                      title="Regenerate response"
+                      disabled={isStreaming}
                     >
-                      Regenerate
+                      🔄 Try Again
+                    </button>
+                  </div>
+                )}
+                
+                {/* User message action buttons */}
+                {message.role === 'user' && (
+                  <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                    <button 
+                      onClick={() => navigator.clipboard.writeText(message.content)} 
+                      className="text-xs text-white/70 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10 flex items-center gap-1"
+                      title="Copy message"
+                    >
+                      📋 Copy
+                    </button>
+                    <button 
+                      onClick={() => { setInputValue(message.content); textareaRef.current?.focus(); }} 
+                      className="text-xs text-white/70 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10 flex items-center gap-1"
+                      title="Edit message"
+                    >
+                      ✏️ Edit
                     </button>
                   </div>
                 )}

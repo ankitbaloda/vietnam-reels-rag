@@ -5,8 +5,8 @@ export async function GET() {
   console.log(`[${timestamp}] Starting models API request`);
   
   try {
-    // Try to connect to backend server
-    const backendUrl = `http://server:8000/models?t=${Date.now()}`;
+    // Try to connect to backend server - use localhost for development
+    const backendUrl = `http://localhost:8000/models?t=${Date.now()}`;
     console.log('Attempting to fetch from backend:', backendUrl);
     const response = await fetch(backendUrl, {
       headers: {
