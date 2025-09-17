@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Message, ModelItem, StepId, Citation, Role, RAGResponse } from '../types';
 import Markdown from './Markdown';
-import ABCompare from './ABCompare';
 import { sendChatMessage, sendRAGQuery } from '../utils/api';
 import { streamSSE } from '../utils/stream';
 import { generateId } from '../utils/localStorage';
@@ -12,7 +11,7 @@ import { formatDateTime } from '../utils/dateUtils';
 interface ChatViewProps {
   messages: Message[];
   onSendMessage: (content: string, model: string, role: Role, citations?: Citation[]) => void;
-  onMarkFinal: (content: string, model?: string) => void;
+  onMarkFinal: (content: string) => void;
   selectedModel: string;
   ragEnabled: boolean;
   topK: number;
@@ -23,7 +22,7 @@ interface ChatViewProps {
   currentStep: StepId;
   models: ModelItem[];
   isLoading: boolean;
-  onUsageUpdate?: (usage: { promptTokens?: number; completionTokens?: number }) => void;
+  onUsageUpdate?: (usage: { promptTokens?: number; completionTokens?: number; contextTokens?: number }) => void;
 }
 
 export default function ChatView({
@@ -45,9 +44,6 @@ export default function ChatView({
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const [abCompareOpen, setAbCompareOpen] = useState(false);
-  const [lastUserMessage, setLastUserMessage] = useState('');
-  const [abLoading, setAbLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
@@ -119,6 +115,7 @@ export default function ChatView({
   const startStream = (url: string, body: any, onDone: (finalText: string) => void) => {
     setStreamBuffer('');
     setStreamCitations(undefined);
+    // Don't clear activity here - keep "Thinking..." until first content arrives
     let acc = '';
     abortRef.current?.abort();
     abortRef.current = new AbortController();
@@ -127,20 +124,44 @@ export default function ChatView({
       url,
       body,
       (evt) => {
-        if (evt.type === 'context' && Array.isArray(evt.citations)) setStreamCitations(evt.citations as any);
-        else if (evt.type === 'message') { acc += evt.delta; setStreamBuffer(acc); }
-        else if (evt.type === 'error') setError(evt.error);
+        if (evt.type === 'context' && Array.isArray(evt.citations)) {
+          setStreamCitations(evt.citations as any);
+          // Clear "Thinking..." when we start receiving content (citations)
+          setActivity('');
+        }
+        else if (evt.type === 'message') { 
+          acc += evt.delta; 
+          setStreamBuffer(acc); 
+          // Clear "Thinking..." when we start receiving message content
+          setActivity('');
+        }
+        else if (evt.type === 'error') { 
+          setError(evt.error); 
+          setActivity(''); 
+          setIsStreaming(false); 
+        }
         else if (evt.type === 'usage' && onUsageUpdate) {
           onUsageUpdate({
             promptTokens: evt.prompt_tokens,
             completionTokens: evt.completion_tokens,
+            contextTokens: evt.context_tokens,
           });
         }
-        else if (evt.type === 'done') { onDone(acc || 'No response'); setActivity(''); setIsStreaming(false); }
+        else if (evt.type === 'done') { 
+          onDone(acc || 'No response'); 
+          setActivity(''); 
+          setIsStreaming(false);
+          setStreamBuffer(''); // Clear stream buffer after completion
+        }
       },
       signal,
     );
-    signal.addEventListener('abort', () => stop());
+    signal.addEventListener('abort', () => {
+      stop();
+      setActivity('');
+      setIsStreaming(false);
+      setStreamBuffer('');
+    });
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -152,51 +173,72 @@ export default function ChatView({
     setInputValue('');
     setError(null);
 
-    // Create user message and send it immediately to ensure persistence
-    const userMsg: Message = { id: generateId(), role: 'user', content: userMessage, ts: Date.now(), step: currentStep };
-    
-    // Send user message immediately to update state
-    onSendMessage(userMsg.content, selectedModel, 'user');
-    setLastUserMessage(userMsg.content);
-
-    console.log('User message sent:', { content: userMessage.slice(0, 50) + '...', step: currentStep });
+    // Send user message immediately to ensure persistence
+    console.log('Sending user message:', { content: userMessage.slice(0, 50) + '...', step: currentStep });
+    onSendMessage(userMessage, selectedModel, 'user');
 
     try {
       setActivity('Thinking…');
       setIsStreaming(true);
       const url = ragEnabled ? '/api/rag/chat/stream' : '/api/chat/stream';
       const body = ragEnabled
-        ? { query: userMessage, model: selectedModel, top_k: topK, temperature, session_id: sessionId, step: currentStep }
+        ? { 
+            query: userMessage, 
+            model: selectedModel, 
+            messages: messages.map(m => ({ role: m.role, content: m.content })), // Include conversation history
+            top_k: topK, 
+            temperature, 
+            session_id: sessionId, 
+            step: currentStep 
+          }
         : { model: selectedModel, messages: [ 
             { role: 'system', content: systemForStep(currentStep) }, 
             ...messages.map(m => ({ role: m.role, content: m.content })),
             { role: 'user', content: userMessage }
           ], temperature, session_id: sessionId, step: currentStep };
+      
       startStream(url, body, (finalText) => {
+        console.log('Sending assistant message:', { content: finalText.slice(0, 50) + '...', step: currentStep });
         onSendMessage(finalText, selectedModel, 'assistant', streamCitations);
         setVariants(v => [...v, { id: generateId(), content: finalText, model: selectedModel }]);
+        
+        // Process queued prompt if any
+        if (queuedPrompt) { 
+          const qp = queuedPrompt; 
+          setQueuedPrompt(null); 
+          setInputValue(qp); 
+          // Use setTimeout to avoid immediate recursive call
+          setTimeout(() => handleSubmit(), 100);
+        }
       });
     } catch (err) {
       console.error('Chat error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
       setError(errorMessage);
       setIsStreaming(false);
-    } finally {
-      if (!isStreaming && queuedPrompt) { const qp = queuedPrompt; setQueuedPrompt(null); setInputValue(qp); Promise.resolve().then(() => handleSubmit()); }
+      setActivity('');
     }
   };
 
   const handleRegenerate = async () => {
     const lastUser = [...messages].reverse().find(m => m.role === 'user');
-    const prompt = lastUser?.content || lastUserMessage || inputValue;
+    const prompt = lastUser?.content || inputValue;
     if (!prompt) return;
+    
     try {
       setActivity('Regenerating…');
       setIsStreaming(true);
+      setError(null);
+      
       const url = ragEnabled ? '/api/rag/chat/stream' : '/api/chat/stream';
       const body = ragEnabled
         ? { query: prompt, model: selectedModel, top_k: topK, temperature, session_id: sessionId, step: currentStep }
-        : { model: selectedModel, messages: [ { role: 'system', content: systemForStep(currentStep) }, ...messages.filter(m => m.role !== 'assistant').map(m => ({ role: m.role, content: m.content })), { role: 'user', content: prompt } ], temperature, session_id: sessionId, step: currentStep };
+        : { model: selectedModel, messages: [ 
+            { role: 'system', content: systemForStep(currentStep) }, 
+            ...messages.filter(m => m.role !== 'assistant').map(m => ({ role: m.role, content: m.content })), 
+            { role: 'user', content: prompt } 
+          ], temperature, session_id: sessionId, step: currentStep };
+      
       startStream(url, body, (finalText) => {
         onSendMessage(finalText, selectedModel, 'assistant', streamCitations);
         setVariants(v => [...v, { id: generateId(), content: finalText, model: selectedModel }]);
@@ -206,47 +248,7 @@ export default function ChatView({
       const errorMessage = err instanceof Error ? err.message : 'Failed to regenerate';
       setError(errorMessage);
       setIsStreaming(false);
-    }
-  };
-
-  const handleABTest = async (userMessage: string, model1: string, model2: string) => {
-    setAbLoading(true);
-    try {
-      const call = async (mId: string) => {
-        try {
-          const resp = ragEnabled
-            ? await sendRAGQuery({ query: userMessage, model: mId, top_k: topK, temperature, session_id: sessionId, step: currentStep })
-            : await sendChatMessage({
-                model: mId,
-                messages: [
-                  { role: 'system', content: systemForStep(currentStep) },
-                  ...messages.map(m => ({ role: m.role, content: m.content })),
-                  { role: 'user', content: userMessage },
-                ] as any,
-                temperature,
-                session_id: sessionId,
-                step: currentStep,
-              });
-          
-          // Update usage tracking for A/B tests
-          if (resp.usage && onUsageUpdate) {
-            onUsageUpdate({
-              promptTokens: resp.usage.prompt_tokens,
-              completionTokens: resp.usage.completion_tokens,
-            });
-          }
-          
-          return { content: resp.choices[0]?.message?.content || 'No response', citations: (resp as RAGResponse).citations };
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : 'Request failed';
-          return { content: `Error: ${msg}`, citations: undefined };
-        }
-      };
-
-      const [r1, r2] = await Promise.all([call(model1), call(model2)]);
-      return { model1Response: r1.content, model2Response: r2.content, model1Citations: r1.citations, model2Citations: r2.citations };
-    } finally {
-      setAbLoading(false);
+      setActivity('');
     }
   };
 
@@ -258,7 +260,7 @@ export default function ChatView({
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4 max-w-5xl mx-auto w-full relative"
+        className="flex-1 overflow-y-auto p-3 space-y-3 max-w-5xl mx-auto w-full relative"
         aria-live="polite"
         onScroll={() => { if (isNearBottom()) setShowJumpToLatest(false); else setShowJumpToLatest(true); }}
       >
@@ -335,7 +337,7 @@ export default function ChatView({
                       📋 Copy
                     </button>
                     <button 
-                      onClick={() => onMarkFinal(message.content, message.model)} 
+                      onClick={() => onMarkFinal(message.content)} 
                       className="text-xs text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1"
                       title="Mark as final version"
                     >
@@ -453,7 +455,7 @@ export default function ChatView({
         </div>
       )}
 
-      <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 flex-shrink-0">
+      <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 flex-shrink-0">
         <div className="max-w-5xl mx-auto">
         {showSearch && (
             <div className="fixed inset-0 z-40 flex items-start justify-center p-4 bg-black/20" onClick={() => setShowSearch(false)}>
@@ -482,13 +484,7 @@ export default function ChatView({
             </div>
           </div>
         )}
-          <div className="flex gap-3 mb-4">
-            <button 
-              onClick={() => setAbCompareOpen(true)} 
-              className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors px-3 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900"
-            >
-              A/B Compare
-            </button>
+          <div className="flex gap-3 mb-3">
           {isStreaming && (
             <button
                 onClick={() => { abortRef.current?.abort(); setIsStreaming(false); setStreamBuffer(''); setStreamCitations(undefined); setActivity(''); }}
@@ -514,7 +510,7 @@ export default function ChatView({
               else if (e.key === 'Escape' && isStreaming) { e.preventDefault(); abortRef.current?.abort(); }
             }}
             placeholder={ragEnabled ? "Ask about your documents..." : "Type your message..."}
-              className="flex-1 border border-gray-300 dark:border-gray-600 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
+              className="flex-1 border border-gray-300 dark:border-gray-600 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
               style={{ height: 'auto', maxHeight: '200px', overflowY: 'auto' }}
             disabled={false}
           />
@@ -567,17 +563,6 @@ export default function ChatView({
         )}
         </div>
       </div>
-
-      <ABCompare
-        models={models}
-        isOpen={abCompareOpen}
-        onClose={() => setAbCompareOpen(false)}
-        onTest={handleABTest}
-        onChooseWinner={(content, model) => onSendMessage(content, model, 'assistant')}
-        isLoading={abLoading}
-        defaultUserMessage={lastUserMessage || inputValue}
-        defaultModelA={selectedModel}
-      />
     </div>
   );
 }

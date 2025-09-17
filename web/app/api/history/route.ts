@@ -5,8 +5,11 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const queryString = searchParams.toString();
     
+    // Get backend URL from environment or fallback to localhost
+    const backendUrl = process.env.NEXT_PUBLIC_RAG_ENDPOINT || 'http://localhost:8000';
+    
     // Try to forward to backend
-    const response = await fetch(`http://localhost:8000/history?${queryString}`, {
+    const response = await fetch(`${backendUrl}/history?${queryString}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

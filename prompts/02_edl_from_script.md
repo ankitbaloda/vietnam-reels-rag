@@ -26,4 +26,4 @@ User:
 Provide VO script, declared VO duration (in seconds), and any location/mood constraints. If VO duration is missing, estimate from script length and state the assumption.
 
 Finally:
-Return a compact JSON block with all shot entries for downstream NLE tooling.
+Return a compact EDL with all shot entries for downstream tooling.

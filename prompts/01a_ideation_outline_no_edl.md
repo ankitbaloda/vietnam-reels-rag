@@ -60,5 +60,5 @@ Important:
 - If unsure, ask a clarifying question instead of guessing.
 
 Finally:
-Return both a human-readable Outline and a JSON block with the same content for downstream scripting.
+Return a human-readable Outline as detailed above.
 End by asking: “Confirm to proceed to Step 2 (EDL) with this outline, or specify changes?”

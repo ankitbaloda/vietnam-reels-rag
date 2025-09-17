@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Session, Message, ModelItem, StepId, FinalEntry, UsageStat, Citation, Role } from '../types';
+import { Session, Message, ModelItem, StepId, FinalEntry, UsageStat, Citation, Role, RAGResponse } from '../types';
 import {
   loadSessions,
   saveSessions,
@@ -15,7 +15,7 @@ import {
   generateSessionName,
   autoRenameSession
 } from '../utils/localStorage';
-import { fetchModels, fetchHistory, runPipelineStep } from '../utils/api';
+import { fetchModels, fetchHistory, runPipelineStep, sendChatMessage, sendRAGQuery } from '../utils/api';
 import SessionSidebar from '../components/SessionSidebar';
 import HeaderControls from '../components/HeaderControls';
 import StepTabs from '../components/StepTabs';
@@ -43,7 +43,7 @@ export default function Home() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState<boolean>(false);
   const [showDashboard, setShowDashboard] = useState<boolean>(false);
-  const [rightPanelTab, setRightPanelTab] = useState<'actions' | 'usage'>('actions');
+  const [rightPanelTab, setRightPanelTab] = useState<'actions' | 'usage' | 'abcompare'>('actions');
 
   // Initialize data on mount
   useEffect(() => {
@@ -90,22 +90,74 @@ export default function Home() {
     initializeData();
   }, []);
 
+  // Sync with server history
+  const syncWithServerHistory = useCallback(async (sessionId: string) => {
+    try {
+      const history = await fetchHistory({ session_id: sessionId, limit: 200 });
+      
+      if (history && history.messages && Array.isArray(history.messages)) {
+        // Convert server messages to frontend format
+        const serverMessages = history.messages.map(msg => ({
+          id: `server_${msg.ts || Date.now()}_${Math.random()}`,
+          role: msg.role as Role,
+          content: msg.content,
+          model: msg.model || undefined,
+          ts: msg.ts || Date.now(),
+          step: msg.step as StepId || 'ideation',
+          citations: undefined // Server doesn't store citations separately
+        }));
+        
+        // Group by step
+        const messagesByStep: Record<StepId, Message[]> = {
+          ideation: [],
+          outline: [],
+          edl: [],
+          script: [],
+          suno: [],
+          handoff: []
+        };
+        
+        serverMessages.forEach(msg => {
+          const step = msg.step || 'ideation';
+          if (messagesByStep[step]) {
+            messagesByStep[step].push(msg);
+          }
+        });
+        
+        // Update current session with server messages if we have a current session
+        if (currentSession && currentSession.id === sessionId) {
+          const updatedSession = {
+            ...currentSession,
+            messagesByStep: {
+              ...currentSession.messagesByStep,
+              ...messagesByStep
+            }
+          };
+          
+          setCurrentSession(updatedSession);
+          
+          // Also update in sessions array
+          setSessions(prev => prev.map(session => 
+            session.id === sessionId ? updatedSession : session
+          ));
+          
+          // Save to localStorage
+          saveSessions(sessions.map(session => 
+            session.id === sessionId ? updatedSession : session
+          ));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to sync with server history:', error);
+    }
+  }, [currentSession, sessions]);
+
   // Sync with server history when session changes
   useEffect(() => {
     if (currentSession) {
       syncWithServerHistory(currentSession.id);
     }
-  }, [currentSession]);
-
-  const syncWithServerHistory = async (sessionId: string) => {
-    try {
-      const history = await fetchHistory({ session_id: sessionId, limit: 200 });
-      // TODO: Merge server history with local state
-      // This would involve comparing timestamps and merging message arrays
-    } catch (err) {
-      console.error('Failed to sync with server history:', err);
-    }
-  };
+  }, [currentSession, syncWithServerHistory]);
 
   // Session management
   const handleSessionCreate = () => {
@@ -182,12 +234,13 @@ export default function Home() {
   };
 
   // Accumulate token usage (basic cost tracker)
-  const handleUsageUpdate = (u: { promptTokens?: number; completionTokens?: number }) => {
+  const handleUsageUpdate = (u: { promptTokens?: number; completionTokens?: number; contextTokens?: number; ragEnabled?: boolean }) => {
     if (!currentSession) return;
     const prev = usage[currentSession.id] || {};
     const next = {
       promptTokens: (prev.promptTokens || 0) + (u.promptTokens || 0),
       completionTokens: (prev.completionTokens || 0) + (u.completionTokens || 0),
+      contextTokens: (prev.contextTokens || 0) + (u.contextTokens || 0),
     };
     const updated = { ...usage, [currentSession.id]: next };
     setUsage(updated);
@@ -238,7 +291,11 @@ export default function Home() {
     
     // Auto-rename session based on conversation after 2+ exchanges
     const totalMsgsAfter = Object.values(intermediateSession.messagesByStep || {}).reduce((acc, arr) => acc + (arr?.length || 0), 0);
-    const shouldAutoRename = totalMsgsAfter >= 4 && !intermediateSession.autoRenamed && role === 'assistant';
+    const userMsgsCount = Object.values(intermediateSession.messagesByStep || {}).reduce((acc, arr) => acc + (arr?.filter(m => m.role === 'user').length || 0), 0);
+    const shouldAutoRename = userMsgsCount >= 2 && !intermediateSession.autoRenamed && role === 'assistant';
+    
+    console.log('Auto-rename check:', { totalMsgsAfter, userMsgsCount, shouldAutoRename, role, autoRenamed: intermediateSession.autoRenamed });
+    
     const finalName = shouldAutoRename ? autoRenameSession(intermediateSession) : intermediateSession.name;
     
     const updatedSession = {
@@ -280,6 +337,75 @@ export default function Home() {
     
     setFinals(updatedFinals);
     saveFinals(updatedFinals);
+  };
+
+  // System prompts for each step
+  const systemForStep = (step: StepId): string => {
+    switch (step) {
+      case 'ideation': return 'Generate a grounded Idea Card & Outline based only on available sources. Keep headings, bullets, and avoid inventing facts.';
+      case 'outline': return 'Create a concise, bullet-point outline with clear headings based on the idea.';
+      case 'edl': return 'Draft an Edit Decision List: shot-by-shot plan; one best candidate clip per shot with key metadata, no filenames.';
+      case 'script': return 'Write a clear, concise Hinglish-style script with helpful headings and bullet points.';
+      case 'suno': return 'Draft a clean, direct Suno music prompt matching tone and pacing.';
+      default: return 'Respond clearly with headings and bullet points; keep it concise and grounded.';
+    }
+  };
+
+  // A/B Test handler
+  const [abLoading, setAbLoading] = useState(false);
+  const handleABTest = async (userMessage: string, model1: string, model2: string) => {
+    if (!currentSession) return;
+    
+    setAbLoading(true);
+    try {
+      const call = async (mId: string) => {
+        try {
+          const resp = ragEnabled
+            ? await sendRAGQuery({ 
+                query: userMessage, 
+                model: mId, 
+                top_k: topK, 
+                temperature, 
+                session_id: currentSession.id, 
+                step: currentSession.currentStep 
+              })
+            : await sendChatMessage({
+                model: mId,
+                messages: [
+                  { role: 'system', content: systemForStep(currentSession.currentStep) },
+                  ...currentMessages.map(m => ({ role: m.role, content: m.content })),
+                  { role: 'user', content: userMessage },
+                ] as any,
+                temperature,
+                session_id: currentSession.id,
+                step: currentSession.currentStep,
+              });
+          
+          // Update usage tracking for A/B tests
+          if (resp.usage) {
+            handleUsageUpdate({
+              promptTokens: resp.usage.prompt_tokens,
+              completionTokens: resp.usage.completion_tokens,
+            });
+          }
+          
+          return { content: resp.choices[0]?.message?.content || 'No response', citations: (resp as RAGResponse).citations };
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : 'Request failed';
+          return { content: `Error: ${msg}`, citations: undefined };
+        }
+      };
+
+      const [r1, r2] = await Promise.all([call(model1), call(model2)]);
+      return { model1Response: r1.content, model2Response: r2.content, model1Citations: r1.citations, model2Citations: r2.citations };
+    } finally {
+      setAbLoading(false);
+    }
+  };
+
+  const handleChooseWinner = (content: string, model: string) => {
+    if (!currentSession) return;
+    handleSendMessage(content, model, 'assistant');
   };
 
   // Get current step messages
@@ -403,6 +529,12 @@ export default function Home() {
               temperature={temperature}
               collapsed={rightPanelCollapsed}
               onToggleCollapse={() => setRightPanelCollapsed(!rightPanelCollapsed)}
+              models={models}
+              onABTest={handleABTest}
+              onChooseWinner={handleChooseWinner}
+              isABLoading={abLoading}
+              defaultUserMessage=""
+              defaultModelA={selectedModel}
             />
           </div>
         </div>

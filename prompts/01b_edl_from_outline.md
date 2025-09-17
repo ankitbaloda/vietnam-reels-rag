@@ -22,4 +22,4 @@ Rules:
 Output:
 - EDL by mini-chapter. For each shot include: the metadata above + 1-line intent.
 - Shot Math summary: total duration, total shots, cuts/30s overall and per chapter.
-- JSON block mirroring the EDL structure.
+- Do NOT include any JSON blocks or code blocks in your response.

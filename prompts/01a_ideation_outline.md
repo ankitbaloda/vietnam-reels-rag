@@ -40,5 +40,7 @@ Rules:
 - Ask user to confirm finalization of the Idea Card + Storyline before generating EDL in Step 2.
 
 Finally:
-- Return both the human-readable outline and a JSON block with the same content.
+Output:
+- Return the human-readable outline as detailed above.
+- Do NOT include any JSON blocks or code blocks in your response.
 - End by asking: “Confirm to proceed to Step 2 (EDL) with this outline, or specify changes?”

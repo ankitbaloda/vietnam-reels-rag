@@ -3,7 +3,7 @@ export type StreamEvent =
   | { type: 'done'; finish_reason?: string }
   | { type: 'error'; error: string }
   | { type: 'context'; citations: any[] }
-  | { type: 'usage'; prompt_tokens?: number; completion_tokens?: number };
+  | { type: 'usage'; prompt_tokens?: number; completion_tokens?: number; context_tokens?: number; rag_enabled?: boolean };
 
 export function streamSSE(url: string, body: any, onEvent: (e: StreamEvent) => void, signal?: AbortSignal): () => void {
   const controller = new AbortController();
@@ -43,7 +43,7 @@ export function streamSSE(url: string, body: any, onEvent: (e: StreamEvent) => v
           else if (event === 'done') onEvent({ type: 'done', finish_reason: obj.finish_reason });
           else if (event === 'error') onEvent({ type: 'error', error: obj.error || 'error' });
           else if (event === 'context') onEvent({ type: 'context', citations: obj.citations || [] });
-          else if (event === 'usage') onEvent({ type: 'usage', prompt_tokens: obj.prompt_tokens, completion_tokens: obj.completion_tokens });
+          else if (event === 'usage') onEvent({ type: 'usage', prompt_tokens: obj.prompt_tokens, completion_tokens: obj.completion_tokens, context_tokens: obj.context_tokens, rag_enabled: obj.rag_enabled });
         } catch {
           // ignore malformed events
         }

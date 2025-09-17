@@ -5,10 +5,11 @@ export async function GET() {
   console.log(`[${timestamp}] Starting models API request`);
   
   try {
-    // Try to connect to backend server - use localhost for development
-    const backendUrl = `http://localhost:8000/models?t=${Date.now()}`;
-    console.log('Attempting to fetch from backend:', backendUrl);
-    const response = await fetch(backendUrl, {
+    // Get backend URL from environment or fallback to localhost
+    const backendUrl = process.env.NEXT_PUBLIC_RAG_ENDPOINT || 'http://localhost:8000';
+    const fullUrl = `${backendUrl}/models?t=${Date.now()}`;
+    console.log('Attempting to fetch from backend:', fullUrl);
+    const response = await fetch(fullUrl, {
       headers: {
         'Content-Type': 'application/json',
       },

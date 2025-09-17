@@ -83,6 +83,7 @@ class ChatRequest(BaseModel):
 class RAGRequest(BaseModel):
     query: str
     model: str
+    messages: Optional[List[ChatMessage]] = None  # Added conversation history
     top_k: Optional[int] = 8
     temperature: Optional[float] = 0.7
     session_id: Optional[str] = None
@@ -520,6 +521,19 @@ async def chat_stream(request: ChatRequest):
                     }
                     yield f"event: usage\ndata: {json.dumps(usage_data)}\n\n"
                 
+                # Save to history if session_id provided
+                if request.session_id and request.messages:
+                    # Save the last user message and the assistant response
+                    last_user_msg = None
+                    for msg in reversed(request.messages):
+                        if msg.role == 'user':
+                            last_user_msg = msg.content
+                            break
+                    
+                    if last_user_msg:
+                        save_chat_history(request.session_id, request.step, "user", last_user_msg)
+                        save_chat_history(request.session_id, request.step, "assistant", content, request.model)
+                
                 yield f"event: done\ndata: {json.dumps({'finish_reason': 'stop'})}\n\n"
                 
             except Exception as e:
@@ -546,15 +560,68 @@ async def rag_chat_stream(request: RAGRequest):
                     
                     # Get context
                     context = retrieve_context(request.query, top_k=request.top_k or 8)
-                    system_prompt = f"You are a helpful assistant for travel content creation. Use the following context to answer questions:\n\n{context}"
                     
-                    # Generate response
-                    response_content = chat_complete(
-                        system=system_prompt,
-                        user=request.query,
+                    # Load step-specific prompt
+                    step = request.step or 'ideation'
+                    prompt_file_map = {
+                        'ideation': '01_ideation_and_edl.md',
+                        'outline': '01a_ideation_outline.md', 
+                        'edl': '01b_edl_from_outline.md',
+                        'script': '02_script_vipinclaude.md',
+                        'suno': '03_suno_prompt.md',
+                        'handoff': '04_editor_handoff.md'
+                    }
+                    
+                    prompt_file = prompt_file_map.get(step, '01_ideation_and_edl.md')
+                    try:
+                        with open(f"prompts/{prompt_file}", 'r', encoding='utf-8') as f:
+                            step_prompt = f.read()
+                    except Exception as e:
+                        logger.warning(f"Could not load prompt file {prompt_file}: {e}")
+                        step_prompt = "You are a helpful assistant for travel content creation."
+                    
+                    # Combine step prompt with context
+                    system_prompt = f"{step_prompt}\n\nRELEVANT CONTEXT FROM YOUR DOCUMENTS:\n{context}"
+                    
+                    # Calculate token usage for RAG
+                    # Estimate tokens for context (rough approximation: 1 token ≈ 4 characters)
+                    context_tokens = len(context) // 4 if context else 0
+                    query_tokens = len(request.query) // 4
+                    system_tokens = len(system_prompt) // 4
+                    
+                    # Build conversation messages with history
+                    messages = []
+                    
+                    # Add conversation history if provided
+                    if request.messages:
+                        for msg in request.messages:
+                            if msg.role == 'system':
+                                continue  # Skip system messages from history, we'll add our RAG system prompt
+                            messages.append({"role": msg.role, "content": msg.content})
+                    
+                    # Add the current user query
+                    messages.append({"role": "user", "content": request.query})
+                    
+                    # Add system prompt at the beginning
+                    final_messages = [{"role": "system", "content": system_prompt}] + messages
+                    
+                    # Calculate total input tokens including conversation history
+                    history_tokens = sum(len(msg["content"]) // 4 for msg in messages)
+                    estimated_input_tokens = system_tokens + history_tokens
+                    
+                    # Generate response using OpenAI client directly for conversation support
+                    client = get_openai_client()
+                    response = client.chat.completions.create(
                         model=request.model,
-                        temperature=request.temperature or 0.7
+                        messages=final_messages,
+                        temperature=request.temperature or 0.7,
+                        max_tokens=4000
                     )
+                    
+                    response_content = response.choices[0].message.content or ""
+                    
+                    # Estimate output tokens
+                    estimated_output_tokens = len(response_content) // 4
                     
                     # Extract citations
                     citations = []
@@ -577,6 +644,21 @@ async def rag_chat_stream(request: RAGRequest):
                     
                     # Send content
                     yield f"event: message\ndata: {json.dumps({'delta': response_content})}\n\n"
+                    
+                    # Send usage data including RAG context tokens
+                    usage_data = {
+                        'prompt_tokens': estimated_input_tokens,
+                        'completion_tokens': estimated_output_tokens,
+                        'context_tokens': context_tokens,  # Additional info about RAG context
+                        'rag_enabled': True
+                    }
+                    yield f"event: usage\ndata: {json.dumps(usage_data)}\n\n"
+                    
+                    # Save to history if session_id provided
+                    if request.session_id:
+                        save_chat_history(request.session_id, request.step, "user", request.query)
+                        save_chat_history(request.session_id, request.step, "assistant", response_content, request.model)
+                    
                     yield f"event: done\ndata: {json.dumps({'finish_reason': 'stop'})}\n\n"
                     
                 except ImportError:
@@ -602,6 +684,11 @@ async def rag_chat_stream(request: RAGRequest):
                             'completion_tokens': response.usage.completion_tokens
                         }
                         yield f"event: usage\ndata: {json.dumps(usage_data)}\n\n"
+                    
+                    # Save to history if session_id provided (fallback path)
+                    if request.session_id:
+                        save_chat_history(request.session_id, request.step, "user", request.query)
+                        save_chat_history(request.session_id, request.step, "assistant", content, request.model)
                     
                     yield f"event: done\ndata: {json.dumps({'finish_reason': 'stop'})}\n\n"
                     

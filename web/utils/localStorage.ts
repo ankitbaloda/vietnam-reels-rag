@@ -33,30 +33,35 @@ export function generateSessionName(firstMessage: string): string {
 
 // Auto-rename session based on conversation summary
 export function autoRenameSession(session: Session): string {
-  // Don't rename if already auto-renamed or no messages
+  // Don't rename if already auto-renamed
   if (session.autoRenamed) return session.name;
   
   const allMessages = Object.values(session.messagesByStep).flat();
   const userMessages = allMessages.filter(m => m.role === 'user');
-  const assistantMessages = allMessages.filter(m => m.role === 'assistant');
   
-  // Need at least 2 exchanges to auto-rename
-  if (userMessages.length < 2 || assistantMessages.length < 1) return session.name;
+  // Need at least 1 user message to auto-rename
+  if (userMessages.length < 1) return session.name;
   
-  // Get first few user messages to understand the topic
-  const topicMessages = userMessages.slice(0, 3).map(m => m.content).join(' ');
+  // Get first user message which often contains the main topic
+  const firstMessage = userMessages[0].content;
+  const allUserText = userMessages.slice(0, 3).map(m => m.content).join(' ');
   
-  // Extract key topics/themes using simple keyword extraction
-  const keywords = extractKeywords(topicMessages);
+  // Extract key topics/themes using improved keyword extraction
+  const keywords = extractKeywords(allUserText);
   
-  if (keywords.length === 0) return session.name;
+  if (keywords.length === 0) {
+    // Fallback to first few words of the first message
+    const firstWords = firstMessage.split(/\s+/).slice(0, 4).join(' ');
+    return firstWords.length > 10 ? firstWords : session.name;
+  }
   
-  // Generate a meaningful name from keywords
-  const sessionName = keywords.slice(0, 4).join(' ');
+  // Generate a meaningful name from keywords (focus on travel/video terms)
+  const sessionName = keywords.slice(0, 3).join(' ');
+  return sessionName.length > 3 ? sessionName : session.name;
   return sessionName.length > 3 ? sessionName : session.name;
 }
 
-// Simple keyword extraction
+// Enhanced keyword extraction for travel/video content
 function extractKeywords(text: string): string[] {
   // Common stop words to filter out
   const stopWords = new Set([
@@ -64,7 +69,17 @@ function extractKeywords(text: string): string[] {
     'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
     'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those',
     'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your',
-    'his', 'her', 'its', 'our', 'their', 'what', 'when', 'where', 'why', 'how', 'which', 'who'
+    'his', 'her', 'its', 'our', 'their', 'what', 'when', 'where', 'why', 'how', 'which', 'who',
+    'about', 'make', 'help', 'need', 'want', 'like', 'create', 'please', 'tell'
+  ]);
+  
+  // Priority keywords for travel/video content
+  const priorityKeywords = new Set([
+    'vietnam', 'hanoi', 'saigon', 'hcmc', 'danang', 'hoi', 'nha', 'trang', 'halong', 'sapa', 'mekong',
+    'reel', 'reels', 'video', 'travel', 'trip', 'journey', 'adventure', 'explore', 'food', 'street',
+    'temple', 'market', 'beach', 'mountain', 'city', 'culture', 'local', 'authentic', 'experience',
+    'itinerary', 'guide', 'tips', 'budget', 'backpack', 'solo', 'family', 'couple', 'romantic',
+    'instagram', 'story', 'content', 'viral', 'trending', 'epic', 'amazing', 'beautiful', 'stunning'
   ]);
   
   const words = text
@@ -72,19 +87,20 @@ function extractKeywords(text: string): string[] {
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
     .filter(word => word.length > 2 && !stopWords.has(word))
-    .slice(0, 20); // Process first 20 meaningful words
+    .slice(0, 30); // Process more words
   
-  // Count word frequency
+  // Count word frequency and boost priority keywords
   const frequency: Record<string, number> = {};
   words.forEach(word => {
-    frequency[word] = (frequency[word] || 0) + 1;
+    const boost = priorityKeywords.has(word) ? 3 : 1; // Boost priority keywords
+    frequency[word] = (frequency[word] || 0) + boost;
   });
   
   // Return words sorted by frequency, then alphabetically
   return Object.entries(frequency)
     .sort(([a, freqA], [b, freqB]) => freqB - freqA || a.localeCompare(b))
     .map(([word]) => word)
-    .slice(0, 6);
+    .slice(0, 8); // Return more keywords
 }
 
 // Safe JSON parse with fallback

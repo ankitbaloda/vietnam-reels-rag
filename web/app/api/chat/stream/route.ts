@@ -4,9 +4,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    // Get backend URL from environment or fallback to localhost
+    const backendUrl = process.env.NEXT_PUBLIC_RAG_ENDPOINT || 'http://localhost:8000';
+    
     // Try backend first, then fallback to OpenAI directly
     try {
-      const backendResponse = await fetch('http://localhost:8000/chat/stream', {
+      const backendResponse = await fetch(`${backendUrl}/chat/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

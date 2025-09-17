@@ -115,9 +115,9 @@ export default function HeaderControls(props: HeaderControlsProps) {
   const others = filtered.filter((m: ModelItem) => !m.recommended);
 
   return (
-    <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+    <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
           {sidebarCollapsed && (
             <button
               onClick={onToggleSidebar}
@@ -135,7 +135,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
             <select
               value={selectedModel}
               onChange={(e) => onModelChange(e.target.value)}
-              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 min-w-40 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 min-w-40 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               disabled={loading}
             >
               {loading ? (
@@ -171,7 +171,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
             <select
               value={persona}
               onChange={(e) => onPersonaChange(e.target.value)}
-              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="Vipin">Vipin</option>
               <option value="Divya">Divya</option>
@@ -187,7 +187,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
               type="text"
               value={trip}
               onChange={(e) => onTripChange(e.target.value)}
-              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 w-24 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               placeholder="vietnam"
             />
           </div>
@@ -211,7 +211,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
             <select
               value={theme}
               onChange={(e) => setTheme(e.target.value as any)}
-              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               aria-label="Theme selector"
             >
               <option value="system">System</option>
@@ -222,7 +222,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
 
           {/* Advanced toggle */}
           <button
-            className="text-sm text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 transition-colors"
+            className="text-sm text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 transition-colors"
             onClick={() => setShowAdvanced(!showAdvanced)}
           >
             {showAdvanced ? "Hide Advanced" : "Advanced"}
@@ -230,7 +230,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
           
           <button
             onClick={onShowDashboard}
-            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 px-2 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 px-2 py-0.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
           >
             Dashboard
           </button>
@@ -252,7 +252,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
           )}
           
           {usage && (usage.promptTokens || usage.completionTokens) && (
-            <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+            <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
               {((usage.promptTokens || 0) + (usage.completionTokens || 0)).toLocaleString()} tokens
             </div>
           )}
@@ -266,7 +266,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
             <select
               value={providerFilter}
               onChange={(e) => setProviderFilter(e.target.value)}
-              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="all">All</option>
               {providers.map((p: string) => (
@@ -282,7 +282,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
             <select
               value={costFilter}
               onChange={(e) => setCostFilter(e.target.value as "all" | "free" | "paid")}
-              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="all">All</option>
               <option value="free">Free</option>
@@ -299,7 +299,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
                 onChange={(e) => onTopKChange(Number(e.target.value))}
                 min={1}
                 max={20}
-                className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-16 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 w-16 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
           )}
@@ -313,7 +313,7 @@ export default function HeaderControls(props: HeaderControlsProps) {
               min={0}
               max={2}
               step={0.1}
-              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-16 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 w-16 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
           </div>
         </div>

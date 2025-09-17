@@ -57,6 +57,7 @@ export interface FinalEntry {
 export interface UsageStat {
   promptTokens?: number;
   completionTokens?: number;
+  contextTokens?: number;
 }
 
 export interface ChatResponse {

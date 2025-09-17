@@ -4,9 +4,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    // Get backend URL from environment or fallback to localhost
+    const backendUrl = process.env.NEXT_PUBLIC_RAG_ENDPOINT || 'http://localhost:8000';
+    
     // Try to forward to backend first
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch(`${backendUrl}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

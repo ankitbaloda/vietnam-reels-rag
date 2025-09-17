@@ -33,6 +33,8 @@ Outputs:
 2) Total VO time vs target reel length, plus brief pacing guidance (WPM/BPM) mapped to the Playbook if provided.
 3) Optional on request only: Two SSML conversions
 
+Important: Do NOT include any JSON blocks or code blocks in your response unless specifically requested.
+
 	- ElevenLabs Multilingual V2 SSML (XML with <speak>, <prosody>, <break>, <emphasis>, <lang xml:lang="hi-IN"> for Hindi segments)
 	- ElevenLabs V3 Alpha inline style tags (e.g., [excited], [contemplative], [amazed], [playful], [romantic], [encouraging])
 	Ensure both versions respect the latest ElevenLabs guidance; re-check current docs before emitting SSML.

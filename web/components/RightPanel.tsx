@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { FinalEntry, Citation, StepId, Message } from '../types';
+import { FinalEntry, Citation, StepId, Message, ModelItem } from '../types';
 import { estimateCostUSD, getModelPricing } from '../utils/pricing';
 import { estimateConversationTokens } from '../utils/tokenizer';
 import { getCoverageSummary, groupCitationsByCategory } from '../utils/coverage';
 import { formatDateTime } from '../utils/dateUtils';
 
 interface RightPanelProps {
-  tab: 'actions' | 'usage';
-  onTabChange: (tab: 'actions' | 'usage') => void;
+  tab: 'actions' | 'usage' | 'abcompare';
+  onTabChange: (tab: 'actions' | 'usage' | 'abcompare') => void;
   citations: Citation[];
   finals: Record<StepId, FinalEntry[]>;
   currentStep: StepId;
@@ -23,6 +23,13 @@ interface RightPanelProps {
   temperature: number;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  // ABCompare props
+  models?: ModelItem[];
+  onABTest?: (userMessage: string, model1: string, model2: string) => Promise<any>;
+  onChooseWinner?: (content: string, model: string) => void;
+  isABLoading?: boolean;
+  defaultUserMessage?: string;
+  defaultModelA?: string;
 }
 
 export default function RightPanel({
@@ -39,7 +46,13 @@ export default function RightPanel({
   topK,
   temperature,
   collapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  models,
+  onABTest,
+  onChooseWinner,
+  isABLoading = false,
+  defaultUserMessage,
+  defaultModelA
 }: RightPanelProps) {
   const coverageSummary = getCoverageSummary(citations);
   const stepFinals = finals[currentStep] || [];
@@ -62,9 +75,15 @@ export default function RightPanel({
     ).outputTokens
   };
 
+  // A/B Compare state
+  const [abTestMessage, setAbTestMessage] = useState(defaultUserMessage || '');
+  const [modelA, setModelA] = useState(defaultModelA || models?.[0]?.id || '');
+  const [modelB, setModelB] = useState(models?.[1]?.id || '');
+
   const tabs = [
     { id: 'actions' as const, label: 'Actions', icon: '⚡' },
-    { id: 'usage' as const, label: 'Usage', icon: '📊' }
+    { id: 'usage' as const, label: 'Usage', icon: '📊' },
+    { id: 'abcompare' as const, label: 'A/B Test', icon: '🧪' }
   ];
 
   return (
@@ -293,6 +312,64 @@ export default function RightPanel({
                   <span>Temperature:</span>
                   <span className="font-medium text-gray-900 dark:text-gray-100">{temperature}</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'abcompare' && (
+          <div className="p-4 space-y-4">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">A/B Test Models</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">Compare responses from two different models side by side</p>
+              
+              {/* This will be a mini version of ABCompare */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Message to test:</label>
+                  <textarea
+                    value={abTestMessage}
+                    onChange={(e) => setAbTestMessage(e.target.value)}
+                    placeholder="Enter your message to compare..."
+                    className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Model A:</label>
+                    <select 
+                      value={modelA}
+                      onChange={(e) => setModelA(e.target.value)}
+                      className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    >
+                      {models?.map(model => (
+                        <option key={model.id} value={model.id}>{model.label || model.id}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Model B:</label>
+                    <select 
+                      value={modelB}
+                      onChange={(e) => setModelB(e.target.value)}
+                      className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    >
+                      {models?.map(model => (
+                        <option key={model.id} value={model.id}>{model.label || model.id}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={() => onABTest?.(abTestMessage, modelA, modelB)}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isABLoading || !abTestMessage.trim() || !modelA || !modelB}
+                >
+                  {isABLoading ? 'Testing...' : 'Run A/B Test'}
+                </button>
               </div>
             </div>
           </div>
