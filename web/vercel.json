@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://vietnam-reels-rag-production.up.railway.app",
+    "NEXT_PUBLIC_RAG_ENDPOINT": "https://vietnam-reels-rag-production.up.railway.app"
+  }
+}

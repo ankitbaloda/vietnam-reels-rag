@@ -1,0 +1,51 @@
+{
+  "trip_id": "vietnam_2024",
+  "destination": "Vietnam",
+  "dates": {
+    "start": "2024-01-15",
+    "end": "2024-02-05"
+  },
+  "duration_days": 21,
+  "budget": {
+    "total_usd": 2500,
+    "currency": "USD",
+    "daily_average": 119
+  },
+  "locations": [
+    "Ho Chi Minh City",
+    "Hanoi",
+    "Da Nang",
+    "Hoi An",
+    "Sapa",
+    "Ha Long Bay",
+    "Ninh Binh",
+    "Mekong Delta"
+  ],
+  "themes": [
+    "street_food",
+    "culture",
+    "adventure",
+    "history",
+    "nature"
+  ],
+  "style_preferences": {
+    "video_length": "15-30 seconds",
+    "music_style": "upbeat_traditional",
+    "color_grading": "warm_vibrant",
+    "pacing": "fast_energetic"
+  },
+  "content_types": [
+    "food_tours",
+    "cultural_experiences",
+    "adventure_activities",
+    "hidden_gems",
+    "budget_tips"
+  ],
+  "files": {
+    "transcripts": "transcripts.txt",
+    "costs": "costs.csv", 
+    "style_guide": "style_guide.txt"
+  },
+  "created": "2025-09-17T13:30:00Z",
+  "status": "active"
+}

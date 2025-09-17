@@ -17,7 +17,7 @@ export default function Dashboard({ sessions, finals, onClose, onOpenSession }: 
   const finalizedItems = sessions.flatMap(session => {
     const sessionFinals = finals[session.id] || {};
     return Object.entries(sessionFinals).flatMap(([step, entries]) =>
-      entries.map(entry => ({
+      (entries as any[]).map(entry => ({
         ...entry,
         sessionId: session.id,
         sessionName: session.name,

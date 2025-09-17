@@ -29,6 +29,7 @@ export interface Session {
   currentStep: StepId;
   messagesByStep: Record<StepId, Message[]>;
   autoRenamed?: boolean; // Track if session was already auto-renamed
+  serverSynced?: boolean; // Track if session has been synced with server
 }
 
 export interface ModelItem {
@@ -58,6 +59,15 @@ export interface UsageStat {
   promptTokens?: number;
   completionTokens?: number;
   contextTokens?: number;
+  requests?: UsageRequest[]; // Track per-request usage with models
+}
+
+export interface UsageRequest {
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+  timestamp: number;
+  step: StepId;
 }
 
 export interface ChatResponse {

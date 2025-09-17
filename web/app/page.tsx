@@ -90,8 +90,13 @@ export default function Home() {
     initializeData();
   }, []);
 
-  // Sync with server history
+  // Sync with server history - DISABLED to prevent message loss
   const syncWithServerHistory = useCallback(async (sessionId: string) => {
+    // TEMPORARILY DISABLED to prevent user messages from disappearing
+    // The automatic sync was causing race conditions where user messages would be overwritten
+    console.log('Server sync disabled to prevent message loss');
+    return;
+    
     try {
       const history = await fetchHistory({ session_id: sessionId, limit: 200 });
       
@@ -125,13 +130,48 @@ export default function Home() {
         });
         
         // Update current session with server messages if we have a current session
-        if (currentSession && currentSession.id === sessionId) {
+        if (currentSession?.id === sessionId) {
+          // Merge server messages with local messages, prioritizing local messages
+          const mergedMessagesByStep: Record<StepId, Message[]> = {
+            ideation: [],
+            outline: [],
+            edl: [],
+            script: [],
+            suno: [],
+            handoff: []
+          };
+          
+          // Start with server messages
+          Object.keys(messagesByStep).forEach(step => {
+            mergedMessagesByStep[step as StepId] = [...messagesByStep[step as StepId]];
+          });
+          
+          // Add local messages that aren't already from server (to prevent duplicates and preserve new messages)
+          Object.keys(currentSession?.messagesByStep || {}).forEach(step => {
+            const localMessages = currentSession?.messagesByStep[step as StepId] || [];
+            const serverMessages = mergedMessagesByStep[step as StepId] || [];
+            
+            localMessages.forEach(localMsg => {
+              // Only add local message if it's not already in server messages
+              // Check by content and timestamp (with small tolerance for timing differences)
+              const isDuplicate = serverMessages.some(serverMsg => 
+                serverMsg.content === localMsg.content && 
+                serverMsg.role === localMsg.role &&
+                Math.abs((serverMsg.ts || 0) - (localMsg.ts || 0)) < 5000 // 5 second tolerance
+              );
+              
+              if (!isDuplicate) {
+                mergedMessagesByStep[step as StepId].push(localMsg);
+              }
+            });
+            
+            // Sort by timestamp to maintain chronological order
+            mergedMessagesByStep[step as StepId].sort((a, b) => (a.ts || 0) - (b.ts || 0));
+          });
+          
           const updatedSession = {
             ...currentSession,
-            messagesByStep: {
-              ...currentSession.messagesByStep,
-              ...messagesByStep
-            }
+            messagesByStep: mergedMessagesByStep
           };
           
           setCurrentSession(updatedSession);
@@ -152,10 +192,10 @@ export default function Home() {
     }
   }, [currentSession, sessions]);
 
-  // Sync with server history when session changes
-  useEffect(() => {
+  // Manual sync function for when user wants to refresh from server
+  const handleSyncWithServer = useCallback(async () => {
     if (currentSession) {
-      syncWithServerHistory(currentSession.id);
+      await syncWithServerHistory(currentSession.id);
     }
   }, [currentSession, syncWithServerHistory]);
 
@@ -233,15 +273,30 @@ export default function Home() {
     saveSessions(updatedSessions);
   };
 
-  // Accumulate token usage (basic cost tracker)
-  const handleUsageUpdate = (u: { promptTokens?: number; completionTokens?: number; contextTokens?: number; ragEnabled?: boolean }) => {
+  // Accumulate token usage with model tracking for accurate cost estimation
+  const handleUsageUpdate = (u: { promptTokens?: number; completionTokens?: number; contextTokens?: number; ragEnabled?: boolean; model?: string }) => {
     if (!currentSession) return;
     const prev = usage[currentSession.id] || {};
+    
+    // Aggregate totals
     const next = {
       promptTokens: (prev.promptTokens || 0) + (u.promptTokens || 0),
       completionTokens: (prev.completionTokens || 0) + (u.completionTokens || 0),
       contextTokens: (prev.contextTokens || 0) + (u.contextTokens || 0),
+      requests: [...(prev.requests || [])]
     };
+    
+    // Track individual request with model for accurate cost calculation
+    if (u.promptTokens || u.completionTokens) {
+      next.requests.push({
+        model: u.model || selectedModel,
+        promptTokens: u.promptTokens || 0,
+        completionTokens: u.completionTokens || 0,
+        timestamp: Date.now(),
+        step: currentSession.currentStep
+      });
+    }
+    
     const updated = { ...usage, [currentSession.id]: next };
     setUsage(updated);
     saveUsage(updated);
@@ -249,7 +304,18 @@ export default function Home() {
 
   // Message handling
   const handleSendMessage = useCallback((content: string, model: string, role: Role, citations?: Citation[]) => {
-    if (!currentSession) return;
+    if (!currentSession) {
+      console.warn('No current session, cannot send message');
+      return;
+    }
+    
+    console.log(`📝 handleSendMessage called:`, { 
+      role, 
+      content: content.slice(0, 50) + '...',
+      step: currentSession.currentStep,
+      sessionId: currentSession.id,
+      currentMessagesCount: (currentSession.messagesByStep[currentSession.currentStep] || []).length
+    });
     
     const message: Message = {
       id: generateId(),
@@ -269,9 +335,11 @@ export default function Home() {
       // Always add user messages - remove duplicate detection
       // (User should be able to send the same message multiple times)
       updatedMessages.push(message);
+      console.log(`👤 User message added. New count: ${updatedMessages.length}`);
     } else {
       // Assistant message - always add it (no filtering/replacement)
       updatedMessages.push(message);
+      console.log(`🤖 Assistant message added. New count: ${updatedMessages.length}`);
     }
     
     // Auto-name session from first user message across all steps, if still default
@@ -312,11 +380,10 @@ export default function Home() {
     saveSessions(updatedSessions);
     
     // Debug logging to track message persistence
-    console.log(`Message added - Role: ${role}, Current messages count: ${updatedMessages.length}`, {
-      content: content.slice(0, 50) + '...',
+    console.log(`✅ Message persisted - Role: ${role}, Session updated with ${updatedMessages.length} messages for step ${currentSession.currentStep}`, {
       sessionId: currentSession.id,
-      step: currentSession.currentStep,
-      totalMessages: updatedMessages.length
+      messageId: message.id,
+      totalMessagesInSession: Object.values(updatedSession.messagesByStep).reduce((acc, arr) => acc + arr.length, 0)
     });
   }, [currentSession, sessions]);
 

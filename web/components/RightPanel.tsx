@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FinalEntry, Citation, StepId, Message, ModelItem } from '../types';
-import { estimateCostUSD, getModelPricing } from '../utils/pricing';
+import { estimateCostUSD, getModelPricing, calculateCost } from '../utils/pricing';
 import { estimateConversationTokens } from '../utils/tokenizer';
 import { getCoverageSummary, groupCitationsByCategory } from '../utils/coverage';
 import { formatDateTime } from '../utils/dateUtils';
@@ -256,7 +256,7 @@ export default function RightPanel({
               </div>
             )}
 
-            {/* Session Cumulative Usage */}
+            {/* Session Cumulative Usage with per-model breakdown */}
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
               <h4 className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-2">Session Total</h4>
               <div className="space-y-1 text-xs">
@@ -271,9 +271,42 @@ export default function RightPanel({
                 <div className="flex justify-between border-t border-blue-200 dark:border-blue-700 pt-1 mt-2">
                   <span className="text-blue-900 dark:text-blue-100 font-medium">Est. Session Cost:</span>
                   <span className="font-semibold text-blue-900 dark:text-blue-100">
-                    ${((sessionTokens.totalInput / 10000) * pricing.inputPer10K + (sessionTokens.totalOutput / 10000) * pricing.outputPer10K).toFixed(4)}
+                    ${(usage as any)?.requests ? 
+                      (usage as any).requests.reduce((total, req) => {
+                        const cost = calculateCost(req.model, req.promptTokens, req.completionTokens);
+                        return total + cost.totalCost;
+                      }, 0).toFixed(4) :
+                      ((sessionTokens.totalInput / 10000) * pricing.inputPer10K + (sessionTokens.totalOutput / 10000) * pricing.outputPer10K).toFixed(4)
+                    }
                   </span>
                 </div>
+                
+                {/* Per-model breakdown if available */}
+                {(usage as any)?.requests && (usage as any).requests.length > 0 && (
+                  <div className="mt-3 pt-2 border-t border-blue-200 dark:border-blue-700">
+                    <div className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-1">By Model:</div>
+                    {Object.entries(
+                      (usage as any).requests.reduce((acc, req) => {
+                        const modelLabel = req.model.split('/').pop() || req.model;
+                        if (!acc[modelLabel]) {
+                          acc[modelLabel] = { cost: 0, requests: 0 };
+                        }
+                        const cost = calculateCost(req.model, req.promptTokens, req.completionTokens);
+                        acc[modelLabel].cost += cost.totalCost;
+                        acc[modelLabel].requests += 1;
+                        return acc;
+                      }, {} as Record<string, { cost: number; requests: number }>)
+                    ).map(([model, stats]) => {
+                      const typedStats = stats as { cost: number; requests: number };
+                      return (
+                        <div key={model} className="flex justify-between text-xs">
+                          <span className="text-blue-600 dark:text-blue-400 truncate">{model} ({typedStats.requests}x):</span>
+                          <span className="font-medium text-blue-900 dark:text-blue-100">${typedStats.cost.toFixed(4)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 

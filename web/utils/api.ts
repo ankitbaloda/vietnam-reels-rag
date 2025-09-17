@@ -8,17 +8,38 @@ import {
   Message 
 } from '../types';
 
+// API configuration for different environments
+const getApiBaseUrl = () => {
+  // In production, use the environment variable
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // In development, use localhost
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  
+  // Server-side fallback
+  return 'http://localhost:8000';
+};
+
 // API base functions
 async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const maxRetries = 2;
   const baseDelay = 250;
   let attempt = 0;
+  
   while (true) {
     try {
-      const response = await fetch(`/api${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
+      // Use direct backend call in production, proxy in development
+      const useProxy = !process.env.NEXT_PUBLIC_API_URL;
+      const url = useProxy ? `/api${endpoint}` : `${getApiBaseUrl()}${endpoint}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options?.headers,
       },
       ...options,
     });

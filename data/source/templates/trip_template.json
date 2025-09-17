@@ -1,0 +1,46 @@
+{
+  "trip_id": "TEMPLATE",
+  "destination": "DESTINATION_NAME",
+  "dates": {
+    "start": "YYYY-MM-DD",
+    "end": "YYYY-MM-DD"
+  },
+  "duration_days": 0,
+  "budget": {
+    "total_usd": 0,
+    "currency": "USD",
+    "daily_average": 0
+  },
+  "locations": [
+    "PRIMARY_CITY",
+    "SECONDARY_LOCATIONS"
+  ],
+  "themes": [
+    "food",
+    "culture", 
+    "adventure",
+    "relaxation",
+    "history",
+    "nature"
+  ],
+  "style_preferences": {
+    "video_length": "15-30 seconds",
+    "music_style": "upbeat",
+    "color_grading": "vibrant",
+    "pacing": "fast"
+  },
+  "content_types": [
+    "food_tours",
+    "cultural_experiences", 
+    "adventure_activities",
+    "hidden_gems",
+    "budget_tips"
+  ],
+  "files": {
+    "transcripts": "transcripts.txt",
+    "costs": "costs.csv",
+    "style_guide": "style_guide.txt"
+  },
+  "created": "YYYY-MM-DDTHH:mm:ssZ",
+  "status": "template"
+}
