@@ -196,7 +196,11 @@ export default function HeaderControls(props: HeaderControlsProps) {
           <div className="flex items-center gap-2" title="Use your documents to ground answers (Recommended)">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">RAG</label>
             <button
-              onClick={() => onRAGToggle(!ragEnabled)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRAGToggle(!ragEnabled);
+              }}
               className={`w-10 h-6 rounded-full transition-colors ${ragEnabled ? "bg-blue-600" : "bg-gray-300"}`}
             >
               <div className={`w-4 h-4 bg-white rounded-full transition-transform ${ragEnabled ? "translate-x-5" : "translate-x-1"}`} />
@@ -222,23 +226,35 @@ export default function HeaderControls(props: HeaderControlsProps) {
 
           {/* Advanced toggle */}
           <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowAdvanced(!showAdvanced);
+            }}
             className="text-sm text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 transition-colors"
-            onClick={() => setShowAdvanced(!showAdvanced)}
           >
             {showAdvanced ? "Hide Advanced" : "Advanced"}
           </button>
           
           <button
-            onClick={onShowDashboard}
-            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 px-2 py-0.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onShowDashboard();
+            }}
+            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 px-2 py-0.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
           >
             Dashboard
           </button>
           
           {onToggleRightPanel && (
             <button
-              onClick={onToggleRightPanel}
-              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleRightPanel();
+              }}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               title={rightPanelCollapsed ? "Show right panel" : "Hide right panel"}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

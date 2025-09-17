@@ -54,7 +54,11 @@ export default function SessionSidebar({
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <button
-          onClick={onSessionCreate}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onSessionCreate();
+          }}
           className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,8 +68,12 @@ export default function SessionSidebar({
         </button>
         {onToggleCollapse && (
           <button
-            onClick={onToggleCollapse}
-            className="ml-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleCollapse();
+            }}
+            className="ml-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -103,7 +111,11 @@ export default function SessionSidebar({
                 </div>
               ) : (
                 <div
-                  onClick={() => onSessionSelect(session)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSessionSelect(session);
+                  }}
                   className="cursor-pointer mb-2"
                 >
                   <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate leading-relaxed">
@@ -123,22 +135,34 @@ export default function SessionSidebar({
               </div>
 
               {/* Action buttons */}
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
-                  onClick={() => handleRename(session)}
-                  className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleRename(session);
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                 >
                   Rename
                 </button>
                 <button
-                  onClick={() => onSessionDuplicate(session)}
-                  className="text-xs text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 px-2 py-1 rounded hover:bg-green-50 dark:hover:bg-green-900/20"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSessionDuplicate(session);
+                  }}
+                  className="text-xs text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 px-2 py-1 rounded hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
                 >
                   Duplicate
                 </button>
                 <button
-                  onClick={() => onSessionDelete(session.id)}
-                  className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSessionDelete(session.id);
+                  }}
+                  className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
                   Delete
                 </button>

@@ -30,7 +30,7 @@ export default function Home() {
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [models, setModels] = useState<ModelItem[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
-  const [ragEnabled, setRagEnabled] = useState<boolean>(false);
+  const [ragEnabled, setRagEnabled] = useState<boolean>(true);
   const [topK, setTopK] = useState<number>(25);
   const [temperature, setTemperature] = useState<number>(0.4);
   const [persona, setPersona] = useState<string>('Both');

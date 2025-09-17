@@ -67,12 +67,25 @@ export default function ChatView({
   };
 
   useEffect(() => {
-    if (isNearBottom()) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    } else {
-      setShowJumpToLatest(true);
+    // Use requestAnimationFrame to prevent jittering during scroll
+    const handleScroll = () => {
+      requestAnimationFrame(() => {
+        if (isNearBottom()) {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+          setShowJumpToLatest(false);
+        } else {
+          setShowJumpToLatest(true);
+        }
+      });
+    };
+
+    // Only auto-scroll for new messages, not on every render
+    const messageCount = messages.length;
+    if (messageCount > 0) {
+      const timeoutId = setTimeout(handleScroll, 100);
+      return () => clearTimeout(timeoutId);
     }
-  }, [messages]);
+  }, [messages.length]); // Only depend on message count, not full messages array
 
   const systemForStep = (step: StepId): string => {
     switch (step) {
@@ -262,13 +275,27 @@ export default function ChatView({
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-3 space-y-3 max-w-5xl mx-auto w-full relative"
         aria-live="polite"
-        onScroll={() => { if (isNearBottom()) setShowJumpToLatest(false); else setShowJumpToLatest(true); }}
+        onScroll={(e) => {
+          // Throttle scroll events to prevent jittering
+          const target = e.currentTarget;
+          clearTimeout((target as any).scrollTimeout);
+          (target as any).scrollTimeout = setTimeout(() => {
+            const threshold = 120;
+            const isNear = target.scrollHeight - target.scrollTop - target.clientHeight < threshold;
+            setShowJumpToLatest(!isNear);
+          }, 50);
+        }}
       >
         {/* Jump to Latest Button - Inside chat area */}
         {showJumpToLatest && (
           <div className="fixed bottom-24 right-6 z-10">
             <button 
-              onClick={() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); setShowJumpToLatest(false); }} 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+                setShowJumpToLatest(false);
+              }} 
               className="w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
               title="Jump to latest message"
             >
@@ -279,7 +306,7 @@ export default function ChatView({
           </div>
         )}
         {messages.map((message) => (
-          <div key={message.id} className="group">
+          <div key={message.id} className="group relative">
             <div className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
               {/* Avatar */}
               <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -328,24 +355,36 @@ export default function ChatView({
                 
                 {/* Action buttons */}
                 {message.role === 'assistant' && (
-                  <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="mt-2 h-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button 
-                      onClick={() => navigator.clipboard.writeText(message.content)} 
-                      className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(message.content);
+                      }} 
+                      className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1 whitespace-nowrap"
                       title="Copy to clipboard"
                     >
                       📋 Copy
                     </button>
                     <button 
-                      onClick={() => onMarkFinal(message.content)} 
-                      className="text-xs text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onMarkFinal(message.content);
+                      }} 
+                      className="text-xs text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1 whitespace-nowrap"
                       title="Mark as final version"
                     >
                       ⭐ Mark Final
                     </button>
                     <button 
-                      onClick={() => handleRegenerate()} 
-                      className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleRegenerate();
+                      }} 
+                      className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1 whitespace-nowrap"
                       title="Regenerate response"
                       disabled={isStreaming}
                     >
@@ -356,17 +395,26 @@ export default function ChatView({
                 
                 {/* User message action buttons */}
                 {message.role === 'user' && (
-                  <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                  <div className="mt-2 h-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 justify-end">
                     <button 
-                      onClick={() => navigator.clipboard.writeText(message.content)} 
-                      className="text-xs text-white/70 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10 flex items-center gap-1"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(message.content);
+                      }} 
+                      className="text-xs text-white/70 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10 flex items-center gap-1 whitespace-nowrap"
                       title="Copy message"
                     >
                       📋 Copy
                     </button>
                     <button 
-                      onClick={() => { setInputValue(message.content); textareaRef.current?.focus(); }} 
-                      className="text-xs text-white/70 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10 flex items-center gap-1"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setInputValue(message.content);
+                        textareaRef.current?.focus();
+                      }} 
+                      className="text-xs text-white/70 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10 flex items-center gap-1 whitespace-nowrap"
                       title="Edit message"
                     >
                       ✏️ Edit
@@ -385,26 +433,26 @@ export default function ChatView({
         ))}
 
         {isStreaming && streamBuffer && (
-          <div className="group">
+          <div className="group relative">
             <div className="flex gap-4">
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-medium">
                 AI
               </div>
               <div className="flex-1 min-w-0">
                 <div className="inline-block max-w-[85%] rounded-2xl px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-              <Markdown content={streamBuffer} />
-              {streamCitations && streamCitations.length > 0 && (
+                  <Markdown content={streamBuffer} />
+                  {streamCitations && streamCitations.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
                       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Sources</h4>
-                  <div className="space-y-2">
-                    {streamCitations.map((citation: any, idx: number) => (
-                        <div key={idx} className="text-xs text-gray-600 dark:text-gray-400">
-                          <span className="font-medium">{citation.title || citation.source}</span>
-                        </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                      <div className="space-y-2">
+                        {streamCitations.map((citation: any, idx: number) => (
+                          <div key={idx} className="text-xs text-gray-600 dark:text-gray-400">
+                            <span className="font-medium">{citation.title || citation.source}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -412,19 +460,19 @@ export default function ChatView({
         )}
 
         {(isLoading || (isStreaming && !streamBuffer)) && (
-          <div className="group">
+          <div className="group relative">
             <div className="flex gap-4">
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-medium">
                 AI
               </div>
               <div className="flex-1 min-w-0">
                 <div className="inline-block rounded-2xl px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-              <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></div>
                     <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                     <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                <span className="ml-2 text-sm">Thinking...</span>
-              </div>
+                    <span className="ml-2 text-sm">Thinking...</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -487,8 +535,16 @@ export default function ChatView({
           <div className="flex gap-3 mb-3">
           {isStreaming && (
             <button
-                onClick={() => { abortRef.current?.abort(); setIsStreaming(false); setStreamBuffer(''); setStreamCitations(undefined); setActivity(''); }}
-                className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors px-3 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                abortRef.current?.abort();
+                setIsStreaming(false);
+                setStreamBuffer('');
+                setStreamCitations(undefined);
+                setActivity('');
+              }}
+              className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors px-3 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
               aria-label="Stop streaming"
               title="Stop (Esc)"
             >
@@ -502,26 +558,38 @@ export default function ChatView({
             value={inputValue}
             onChange={(e) => {
               setInputValue(e.target.value);
-              const ta = textareaRef.current;
-              if (ta) { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, Math.round(window.innerHeight * 0.6)) + 'px'; }
+              // Use requestAnimationFrame to prevent jittering during resize
+              requestAnimationFrame(() => {
+                const ta = textareaRef.current;
+                if (ta) {
+                  ta.style.height = 'auto';
+                  const newHeight = Math.min(ta.scrollHeight, Math.round(window.innerHeight * 0.6));
+                  ta.style.height = newHeight + 'px';
+                }
+              });
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
               else if (e.key === 'Escape' && isStreaming) { e.preventDefault(); abortRef.current?.abort(); }
             }}
             placeholder={ragEnabled ? "Ask about your documents..." : "Type your message..."}
-              className="flex-1 border border-gray-300 dark:border-gray-600 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
-              style={{ height: 'auto', maxHeight: '200px', overflowY: 'auto' }}
+            className="flex-1 border border-gray-300 dark:border-gray-600 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none transition-all duration-150"
+            style={{ height: 'auto', maxHeight: '200px', overflowY: 'auto' }}
             disabled={false}
           />
           <button
             type="submit"
             disabled={!inputValue.trim()}
-              className={`px-6 py-3 rounded-2xl text-sm font-medium transition-colors ${
-                !inputValue.trim() 
-                  ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
-              }`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleSubmit();
+            }}
+            className={`px-6 py-3 rounded-2xl text-sm font-medium transition-colors ${
+              !inputValue.trim() 
+                ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+                : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
+            }`}
           >
             {isStreaming ? 'Queue' : 'Send'}
           </button>

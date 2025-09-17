@@ -91,7 +91,11 @@ export default function RightPanel({
       {/* Collapse Button */}
       {onToggleCollapse && (
         <button
-          onClick={onToggleCollapse}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleCollapse();
+          }}
           className="absolute top-2 left-2 z-10 p-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
           title={collapsed ? "Expand panel" : "Collapse panel"}
         >
@@ -113,7 +117,11 @@ export default function RightPanel({
           {tabs.map((tabItem) => (
             <button
               key={tabItem.id}
-              onClick={() => onTabChange(tabItem.id)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onTabChange(tabItem.id);
+              }}
               className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
                 tab === tabItem.id
                   ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-b-2 border-blue-600'
@@ -364,7 +372,11 @@ export default function RightPanel({
                 </div>
                 
                 <button 
-                  onClick={() => onABTest?.(abTestMessage, modelA, modelB)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onABTest?.(abTestMessage, modelA, modelB);
+                  }}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isABLoading || !abTestMessage.trim() || !modelA || !modelB}
                 >
